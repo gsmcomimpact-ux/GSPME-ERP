@@ -58,6 +58,7 @@ import {
   INITIAL_DOCUMENTS,
   INITIAL_AI_INSIGHTS,
 } from '../data/initialData';
+import { api, type SyncSnapshot } from './api';
 
 const STORAGE_KEYS = {
   TENANTS: 'gspme_tenants_v2',
@@ -102,6 +103,9 @@ function getFromStorage<T>(key: string, defaultValue: T): T {
 function saveToStorage<T>(key: string, value: T): void {
   try {
     localStorage.setItem(key, JSON.stringify(value));
+    if (api.isEnabled()) {
+      api.schedulePush(key.replace(/^gspme_/, '').replace(/_v2$/, ''), () => getFromStorage(key, null));
+    }
   } catch (err) {
     console.error('Storage save error:', err);
   }
@@ -582,7 +586,35 @@ export class SaaSStorageService {
     saveToStorage(STORAGE_KEYS.AUDIT_LOGS, [newLog, ...all].slice(0, 300));
   }
 
+  /** Remplace le cache local par l'instantané du tenant renvoyé par le serveur (sans écho vers l'API). */
+  public hydrateFromServer(snapshot: SyncSnapshot): void {
+    this.clearLocal();
+    const put = (key: string, value: unknown) => localStorage.setItem(key, JSON.stringify(value));
+    put(STORAGE_KEYS.TENANTS, snapshot.tenants);
+    put(STORAGE_KEYS.USERS, snapshot.users);
+    put(STORAGE_KEYS.ACTIVE_TENANT_ID, snapshot.activeTenantId);
+    put(STORAGE_KEYS.ACTIVE_USER_ID, snapshot.activeUserId);
+    for (const [name, rows] of Object.entries(snapshot.collections)) {
+      const key = `gspme_${name}_v2`;
+      if (Object.values(STORAGE_KEYS).includes(key)) put(key, rows);
+    }
+    this.notify();
+  }
+
+  /** Vide le cache local (déconnexion). */
+  public clearLocal(): void {
+    Object.values(STORAGE_KEYS).forEach(k => localStorage.removeItem(k));
+  }
+
+  public async refreshFromServer(): Promise<void> {
+    this.hydrateFromServer(await api.fetchSnapshot());
+  }
+
   public resetData(): void {
+    if (api.isEnabled()) {
+      console.warn('Réinitialisation désactivée en mode connecté (données serveur).');
+      return;
+    }
     Object.values(STORAGE_KEYS).forEach(k => localStorage.removeItem(k));
     this.notify();
   }

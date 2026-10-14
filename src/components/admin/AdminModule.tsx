@@ -22,6 +22,7 @@ import { Tenant, User, AuditLog, Role, SubscriptionPlanId } from '../../types';
 import { COUNTRY_PACKS, formatMoney } from '../../services/currency';
 import { Modal, SegmentedTabs } from '../common/UIComponents';
 import { storage } from '../../services/storage';
+import { api } from '../../services/api';
 import { subscriptionService } from '../../services/subscriptionService';
 
 interface AdminModuleProps {
@@ -57,6 +58,7 @@ export function AdminModule({
   const [inviteName, setInviteName] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<Role>('COMMERCIAL_VENTES');
+  const [invitePassword, setInvitePassword] = useState('');
 
   // New Branch State
   const [branchName, setBranchName] = useState('');
@@ -81,8 +83,22 @@ export function AdminModule({
     alert('Informations de la société mises à jour avec succès.');
   };
 
-  const handleInviteUser = (e: React.FormEvent) => {
+  const handleInviteUser = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (api.isEnabled()) {
+      // Mode serveur : le compte (avec mot de passe) est créé côté API, puis le cache est resynchronisé.
+      try {
+        await api.createUser({ name: inviteName, email: inviteEmail, password: invitePassword, role: inviteRole });
+        await storage.refreshFromServer();
+        setInviteModalOpen(false);
+        setInviteName('');
+        setInviteEmail('');
+        setInvitePassword('');
+      } catch (err) {
+        alert((err as Error).message);
+      }
+      return;
+    }
     const newUser: User = {
       id: `user-${Date.now()}`,
       name: inviteName,
@@ -644,6 +660,21 @@ export function AdminModule({
               className="w-full p-2 border border-slate-300 rounded-lg"
             />
           </div>
+
+          {api.isEnabled() && (
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">Mot de passe initial * (8 caractères min.)</label>
+              <input
+                type="password"
+                value={invitePassword}
+                onChange={e => setInvitePassword(e.target.value)}
+                minLength={8}
+                required
+                autoComplete="new-password"
+                className="w-full p-2 border border-slate-300 rounded-lg"
+              />
+            </div>
+          )}
 
           <div>
             <label className="block font-semibold text-slate-700 mb-1">Rôle Attribué (Permissions RBAC) *</label>
