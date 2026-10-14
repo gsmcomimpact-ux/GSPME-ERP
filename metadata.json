@@ -1,0 +1,6 @@
+{
+  "name": "GSPME - ERP & Gestion PME Africaines",
+  "description": "Plateforme SaaS intégrée de gestion d'entreprise pour l'Afrique : Ventes, Achats, Stocks, Trésorerie, Paie et Comptabilité OHADA / SYSCOHADA.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
