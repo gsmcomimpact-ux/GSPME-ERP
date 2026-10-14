@@ -7,7 +7,7 @@ import express, { type NextFunction, type Request, type Response } from 'express
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { db, transaction } from './db.ts';
+import { APP_DIR, db, transaction } from './db.ts';
 import {
   type AuthedRequest,
   hashPassword,
@@ -277,7 +277,7 @@ app.post('/api/users', requireAuth, asyncH((req, res) => {
 }));
 
 // ---------------------------------------------------------------- Front statique (production)
-const dist = path.resolve(process.cwd(), 'dist');
+const dist = path.resolve(APP_DIR, 'dist');
 if (fs.existsSync(dist)) {
   app.use(express.static(dist));
   app.get(/^\/(?!api\/).*/, (_req, res) => res.sendFile(path.join(dist, 'index.html')));

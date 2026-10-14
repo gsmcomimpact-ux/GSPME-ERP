@@ -4,16 +4,20 @@
  * - users    : comptes avec mot de passe haché (scrypt), rattachés à un tenant
  * - records  : documents métier (factures, produits...) cloisonnés par (tenant_id, collection)
  */
-import { DatabaseSync } from 'node:sqlite';
+import Database from 'better-sqlite3';
 import { randomBytes } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const dbPath = process.env.DATABASE_PATH || path.resolve(process.cwd(), 'data', 'gspme.db');
+/** Dossier de l'application (le bundle CJS expose __dirname ; en dev tsx on retombe sur le cwd). */
+export const APP_DIR = typeof __dirname !== 'undefined' ? __dirname : process.cwd();
+
+const dbPath = process.env.DATABASE_PATH || path.resolve(APP_DIR, 'data', 'gspme.db');
 if (dbPath !== ':memory:') fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 
-export const db = new DatabaseSync(dbPath);
-db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
+export const db = new Database(dbPath);
+db.pragma('journal_mode = WAL');
+db.pragma('foreign_keys = ON');
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS meta (

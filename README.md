@@ -25,3 +25,12 @@ modifiables uniquement par `SUPER_ADMIN_SAAS`, `AUDITEUR_EXTERNE` en lecture seu
 
 ## Tests
 `npm run test:api`
+
+## Déploiement sur iFastNet (cPanel « Setup Node.js App », Node ≤ 20)
+1. En local : `npm install && npm run build:deploy` → dossier `deploy/` (`server.js`, `dist/`, `package.json`).
+2. cPanel → *Setup Node.js App* → *Create Application* : Node 20, mode Production,
+   Application Root `gspme`, Application URL = la **racine** du domaine ou d'un sous-domaine
+   (le front utilise des chemins absolus `/api` et `/assets`), Startup File `server.js`.
+3. Envoyez le contenu de `deploy/` dans `~/gspme`, puis *Run NPM Install* (installe `better-sqlite3`).
+4. Variables d'environnement dans l'interface : `JWT_SECRET`, `SUPER_ADMIN_EMAIL`, `SUPER_ADMIN_PASSWORD`.
+5. *Restart*. La base SQLite est créée dans `~/gspme/data/` (à sauvegarder régulièrement).
