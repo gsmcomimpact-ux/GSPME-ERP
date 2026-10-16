@@ -24,6 +24,7 @@ import { Modal, SegmentedTabs } from '../common/UIComponents';
 import { storage } from '../../services/storage';
 import { api } from '../../services/api';
 import { subscriptionService } from '../../services/subscriptionService';
+import { PdfService } from '../../services/pdfService';
 
 interface AdminModuleProps {
   tenant: Tenant;
@@ -41,6 +42,12 @@ export function AdminModule({
   onSelectTenant,
 }: AdminModuleProps) {
   const [activeTab, setActiveTab] = useState<'societe' | 'utilisateurs' | 'abonnements' | 'audit'>('societe');
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 4000);
+  };
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [newBranchModalOpen, setNewBranchModalOpen] = useState(false);
 
@@ -80,7 +87,7 @@ export function AdminModule({
       email,
       capitalSocial,
     });
-    alert('Informations de la société mises à jour avec succès.');
+    showToast('Informations de la société mises à jour avec succès.');
   };
 
   const handleInviteUser = async (e: React.FormEvent) => {
@@ -467,8 +474,8 @@ export function AdminModule({
                         )}
                       </div>
                       <div className="text-base font-extrabold text-[#0F5132] mt-2">
-                        {formatMoney(plan.monthlyPriceFCFA, 'XOF')}
-                        <span className="text-[10px] text-slate-500 font-normal"> / mois</span>
+                        {plan.monthlyPriceFCFA === 0 ? 'Gratuit (0 FR CFA)' : formatMoney(plan.monthlyPriceFCFA, 'XOF')}
+                        {plan.monthlyPriceFCFA > 0 && <span className="text-[10px] text-slate-500 font-normal"> / mois</span>}
                       </div>
                       <p className="text-[11px] text-slate-500 mt-1">{plan.tagline}</p>
 
@@ -496,10 +503,8 @@ export function AdminModule({
                       ) : (
                         <button
                           onClick={() => {
-                            if (confirm(`Voulez-vous basculer votre abonnement vers la formule ${plan.name} (${formatMoney(plan.monthlyPriceFCFA, 'XOF')}/mois) ?`)) {
-                              subscriptionService.changeSubscriptionPlan(tenant.id, plan.id);
-                              alert(`Votre formule a été mise à jour avec succès vers ${plan.name} !`);
-                            }
+                            subscriptionService.changeSubscriptionPlan(tenant.id, plan.id);
+                            showToast(`Votre formule a été mise à jour avec succès vers ${plan.name} !`);
                           }}
                           className="w-full py-2 bg-[#0F5132] hover:bg-[#0c4028] text-white font-bold rounded-lg cursor-pointer transition-colors text-center"
                         >
@@ -559,12 +564,12 @@ export function AdminModule({
                         </td>
                         <td className="py-2.5 px-4 text-center">
                           <button
-                            onClick={() => {
-                              alert(`Téléchargement de la facture d'abonnement ${order.orderId} (Montant: ${formatMoney(order.amountTTC, order.currency)}). Justificatif fiscal conforme archivé.`);
-                            }}
-                            className="px-2.5 py-1 text-[#0F5132] hover:bg-[#0F5132]/10 rounded font-semibold text-[11px] cursor-pointer"
+                            onClick={() => PdfService.downloadSubscriptionInvoicePdf(order, tenant)}
+                            className="px-2.5 py-1 text-[#0F5132] hover:bg-[#0F5132]/10 rounded font-semibold text-[11px] cursor-pointer flex items-center gap-1 mx-auto transition-colors"
+                            title="Télécharger la facture officielle en PDF"
                           >
-                            Télécharger Reçu
+                            <Download className="w-3.5 h-3.5" />
+                            <span>Facture PDF</span>
                           </button>
                         </td>
                       </tr>
@@ -781,6 +786,14 @@ export function AdminModule({
           </div>
         </form>
       </Modal>
+
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-5 right-5 z-50 px-4 py-3 bg-[#0F5132] text-white text-xs font-semibold rounded-xl shadow-xl border border-emerald-600 flex items-center gap-2.5">
+          <CheckCircle2 className="w-4 h-4 text-emerald-300 shrink-0" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
     </div>
   );
 }

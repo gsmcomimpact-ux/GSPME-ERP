@@ -20,12 +20,14 @@ import {
   Unlock,
   CheckCircle2,
   AlertTriangle,
-  QrCode
+  QrCode,
+  Download,
 } from 'lucide-react';
 import { Tenant, Product, PosSession, PosReceipt, Role } from '../../types';
 import { formatMoney } from '../../services/currency';
 import { Modal } from '../common/UIComponents';
 import { storage } from '../../services/storage';
+import { PdfService } from '../../services/pdfService';
 
 interface PosModuleProps {
   tenant: Tenant;
@@ -598,16 +600,24 @@ export function PosModule({ tenant, products, posSessions, userRole }: PosModule
             <div className="flex justify-end gap-2 no-print">
               <button
                 onClick={() => setPrintedReceipt(null)}
-                className="px-3 py-1.5 border border-slate-200 rounded text-xs cursor-pointer"
+                className="px-3 py-1.5 border border-slate-200 rounded text-xs cursor-pointer hover:bg-slate-50"
               >
                 Fermer
               </button>
               <button
-                onClick={() => window.print()}
-                className="px-4 py-1.5 bg-[#0F5132] text-white rounded text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+                onClick={() => PdfService.downloadPosReceiptPdf(printedReceipt, tenant)}
+                className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
+                title="Télécharger le ticket de caisse en fichier PDF"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Télécharger Ticket (PDF)</span>
+              </button>
+              <button
+                onClick={() => PdfService.printCurrent()}
+                className="px-4 py-1.5 bg-[#0F5132] hover:bg-[#0c4028] text-white rounded text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
               >
                 <Printer className="w-3.5 h-3.5" />
-                <span>Imprimer Ticket</span>
+                <span>Imprimer</span>
               </button>
             </div>
           </div>

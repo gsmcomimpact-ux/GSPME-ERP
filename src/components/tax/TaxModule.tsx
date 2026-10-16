@@ -13,11 +13,13 @@ import {
   DollarSign,
   Download,
   Building2,
-  HelpCircle
+  HelpCircle,
+  Printer,
 } from 'lucide-react';
 import { Tenant, Invoice, PurchaseInvoice, Role } from '../../types';
 import { formatMoney, COUNTRY_PACKS } from '../../services/currency';
 import { SegmentedTabs } from '../common/UIComponents';
+import { PdfService } from '../../services/pdfService';
 
 interface TaxModuleProps {
   tenant: Tenant;
@@ -125,11 +127,12 @@ export function TaxModule({ tenant, invoices, purchases, userRole }: TaxModulePr
                 </p>
               </div>
               <button
-                onClick={() => window.print()}
-                className="px-3 py-1.5 border border-slate-300 rounded text-slate-700 hover:bg-slate-100 flex items-center gap-1.5 cursor-pointer"
+                onClick={() => PdfService.printCurrent()}
+                className="px-3 py-1.5 border border-slate-300 rounded text-slate-700 hover:bg-slate-100 flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
+                title="Imprimer l'état fiscal récapitulatif"
               >
-                <Download className="w-3.5 h-3.5" />
-                <span>Télécharger État Fiscal</span>
+                <Printer className="w-3.5 h-3.5" />
+                <span>Imprimer l'État Fiscal</span>
               </button>
             </div>
 

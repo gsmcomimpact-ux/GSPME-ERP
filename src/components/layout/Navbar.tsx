@@ -32,6 +32,7 @@ interface NavbarProps {
   onSearchChange: (query: string) => void;
   onOpenNewTenantModal: () => void;
   onOpenPublicSite?: () => void;
+  onNavigate?: (module: any) => void;
 }
 
 export function Navbar({
@@ -46,6 +47,7 @@ export function Navbar({
   onSearchChange,
   onOpenNewTenantModal,
   onOpenPublicSite,
+  onNavigate,
 }: NavbarProps) {
   const [tenantDropdownOpen, setTenantDropdownOpen] = useState(false);
   const [branchDropdownOpen, setBranchDropdownOpen] = useState(false);
@@ -215,11 +217,19 @@ export function Navbar({
         {onOpenPublicSite && (
           <button
             onClick={onOpenPublicSite}
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-[#D4AF37]/15 hover:bg-[#D4AF37]/25 text-[#0F5132] border border-[#D4AF37]/40 text-xs font-bold rounded-lg transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 bg-[#D4AF37]/15 hover:bg-[#D4AF37]/25 text-[#0F5132] border border-[#D4AF37]/40 text-xs font-bold rounded-lg transition-colors cursor-pointer"
             title="Consulter le site public, les tarifs et la FAQ"
           >
-            <Globe2 className="w-3.5 h-3.5 text-[#0F5132]" />
-            <span>Site Public & Tarifs</span>
+            <div className="w-4 h-4 rounded overflow-hidden shrink-0 bg-white">
+              <img
+                src="/src/assets/images/gspme_logo.jpg"
+                alt="GSPME-ERP"
+                referrerPolicy="no-referrer"
+                className="w-full h-full object-contain"
+              />
+            </div>
+            <span className="hidden sm:inline">Site Public & Tarifs</span>
+            <span className="sm:hidden text-[11px]">Site & Tarifs</span>
           </button>
         )}
 
@@ -293,12 +303,30 @@ export function Navbar({
                 <span className="text-[10px] text-slate-400">2 nouvelles</span>
               </div>
               <div className="py-2 space-y-2 text-xs">
-                <div className="p-2 bg-amber-50/60 rounded-lg border border-amber-200/50">
-                  <div className="font-semibold text-amber-900">Seuil de stock critique</div>
+                <div
+                  onClick={() => {
+                    setNotificationsOpen(false);
+                    onNavigate?.('inventory');
+                  }}
+                  className="p-2 bg-amber-50/60 hover:bg-amber-100/60 rounded-lg border border-amber-200/50 cursor-pointer transition-colors"
+                >
+                  <div className="font-semibold text-amber-900 flex items-center justify-between">
+                    <span>Seuil de stock critique</span>
+                    <span className="text-[10px] text-amber-700 font-bold">Voir Stock →</span>
+                  </div>
                   <div className="text-[11px] text-amber-700">Peinture satinée 20L : plus que 8 unités en stock (seuil mini : 15).</div>
                 </div>
-                <div className="p-2 bg-slate-50 rounded-lg border border-slate-100">
-                  <div className="font-semibold text-slate-800">Créance échue</div>
+                <div
+                  onClick={() => {
+                    setNotificationsOpen(false);
+                    onNavigate?.('sales');
+                  }}
+                  className="p-2 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-100 cursor-pointer transition-colors"
+                >
+                  <div className="font-semibold text-slate-800 flex items-center justify-between">
+                    <span>Créance échue</span>
+                    <span className="text-[10px] text-[#0F5132] font-bold">Voir Ventes →</span>
+                  </div>
                   <div className="text-[11px] text-slate-600">Facture FAC-2026-0041 (CSE SA) : échéance dépassée.</div>
                 </div>
               </div>

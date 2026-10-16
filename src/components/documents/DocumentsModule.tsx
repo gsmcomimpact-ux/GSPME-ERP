@@ -19,6 +19,7 @@ import {
 import { Tenant, StoredDocument, Role } from '../../types';
 import { Modal } from '../common/UIComponents';
 import { storage } from '../../services/storage';
+import { PdfService } from '../../services/pdfService';
 
 interface DocumentsModuleProps {
   tenant: Tenant;
@@ -66,7 +67,7 @@ export function DocumentsModule({
 
   const handleDownload = (doc: StoredDocument) => {
     storage.logAudit('EXPORT', 'DOCUMENTS', `Consultation et téléchargement document : ${doc.title}`);
-    alert(`Téléchargement de : ${doc.title} (Fichier PDF certifié)`);
+    PdfService.downloadStoredDocumentPdf(doc, tenant);
   };
 
   const query = searchFilter.toLowerCase();

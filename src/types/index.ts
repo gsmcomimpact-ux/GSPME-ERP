@@ -56,6 +56,7 @@ export interface Tenant {
   name: string;
   tradeName?: string;
   legalForm: 'SARL' | 'SAS' | 'SA' | 'SUARL' | 'GIE' | 'ENTREPRISE_INDIVIDUELLE';
+  logoUrl?: string; // Logo personnalisé de l'entreprise (Base64 data URL ou URL d'image)
   countryCode: CountryCode;
   taxNumber: string;
   tradeRegisterNumber: string;
@@ -532,7 +533,7 @@ export interface AuditLog {
 // MODULE Q — Site Public, Acquisition Clients & Monétisation SaaS
 export type SubscriptionPlanId = 'STARTER' | 'ESSENTIEL' | 'BUSINESS' | 'PREMIUM';
 export type BillingCycle = 'MENSUEL' | 'ANNUEL';
-export type PaymentGatewayType = 'WAVE' | 'ORANGE_MONEY' | 'MTN_MOMO' | 'MOOV_MONEY' | 'CARTE_BANCAIRE' | 'VIREMENT';
+export type PaymentGatewayType = 'WAVE' | 'ORANGE_MONEY' | 'MTN_MOMO' | 'MOOV_MONEY' | 'CARTE_BANCAIRE' | 'VIREMENT' | 'GRATUIT';
 
 export interface SubscriptionPlanConfig {
   id: SubscriptionPlanId;

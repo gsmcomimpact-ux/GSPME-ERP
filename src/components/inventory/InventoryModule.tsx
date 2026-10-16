@@ -14,7 +14,8 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   Package,
-  Layers
+  Layers,
+  AlertCircle,
 } from 'lucide-react';
 import { Tenant, Product, Warehouse, Role } from '../../types';
 import { formatMoney } from '../../services/currency';
@@ -90,10 +91,13 @@ export function InventoryModule({
     setSellingPriceHT(0);
   };
 
+  const [transferError, setTransferError] = useState<string | null>(null);
+
   const handleTransferSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setTransferError(null);
     if (sourceWarehouseId === targetWarehouseId) {
-      alert('Veuillez sélectionner deux entrepôts différents.');
+      setTransferError('Veuillez sélectionner deux entrepôts différents.');
       return;
     }
 
@@ -102,7 +106,7 @@ export function InventoryModule({
 
     const sourceAvailable = prod.warehouseStock[sourceWarehouseId] || 0;
     if (transferQty > sourceAvailable) {
-      alert(`Stock insuffisant dans l'entrepôt source (${sourceAvailable} disponibles).`);
+      setTransferError(`Stock insuffisant dans l'entrepôt source (${sourceAvailable} disponibles).`);
       return;
     }
 
@@ -491,6 +495,12 @@ export function InventoryModule({
         subtitle="Mouvement logistique interne traçable avec mise à jour des inventaires"
       >
         <form onSubmit={handleTransferSubmit} className="space-y-4 text-xs">
+          {transferError && (
+            <div className="p-3 bg-red-50 border border-red-200 text-red-800 rounded-lg text-xs font-semibold flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+              <span>{transferError}</span>
+            </div>
+          )}
           <div>
             <label className="block font-semibold text-slate-700 mb-1">Article à transférer *</label>
             <select
