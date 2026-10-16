@@ -302,9 +302,9 @@ export class TestRunnerService {
 
     const pricesValid =
       starter?.monthlyPriceFCFA === 0 &&
-      essentiel?.monthlyPriceFCFA === 15000 &&
-      business?.monthlyPriceFCFA === 25000 &&
-      premium?.monthlyPriceFCFA === 50000;
+      essentiel?.monthlyPriceFCFA === 5000 &&
+      business?.monthlyPriceFCFA === 10000 &&
+      premium?.monthlyPriceFCFA === 20000;
 
     const quotasValid =
       (starter?.maxUsers ?? 0) <= (essentiel?.maxUsers ?? 0) &&
@@ -317,7 +317,7 @@ export class TestRunnerService {
       id: 'test-9',
       category: 'ABONNEMENTS_MONETISATION',
       name: 'Conformité des 4 Offres SaaS (Gratuit, 15k, 25k, 50k FCFA)',
-      description: 'Vérifie que les 4 formules d’abonnement (Gratuit, Essentiel, Business, Premium) sont configurées aux tarifs officiels (0, 15 000, 25 000 et 50 000 FCFA) et avec échelonnement progressif des quotas.',
+      description: 'Vérifie que les 4 formules d’abonnement (Gratuit, Essentiel, Business, Premium) sont configurées aux tarifs officiels (0, 5 000, 10 000 et 20 000 FCFA par mois) et avec échelonnement progressif des quotas.',
       passed,
       durationMs: Math.round((performance.now() - start) * 100) / 100,
       details: passed

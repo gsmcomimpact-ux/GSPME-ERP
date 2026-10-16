@@ -19,7 +19,7 @@ import {
 import { COUNTRY_PACKS } from './currency';
 import { storage } from './storage';
 
-// 4 Offres officielles configurables GSPME : Gratuit, 15 000, 25 000 et 50 000 FCFA
+// 4 Offres officielles configurables GSPME : Gratuit, 5 000, 10 000 et 20 000 FCFA par mois
 export const DEFAULT_PLANS: SubscriptionPlanConfig[] = [
   {
     id: 'STARTER',
@@ -46,8 +46,8 @@ export const DEFAULT_PLANS: SubscriptionPlanConfig[] = [
     id: 'ESSENTIEL',
     name: 'Essentiel',
     tagline: 'Pour commerçants, boutiques, prestataires et TPE en pleine croissance',
-    monthlyPriceFCFA: 15000,
-    annualPriceFCFA: 150000, // 2 mois offerts
+    monthlyPriceFCFA: 5000,
+    annualPriceFCFA: 50000, // 2 mois offerts
     maxUsers: 5,
     maxStorageMB: 10240, // 10 Go
     badge: 'Essentiel PME',
@@ -75,8 +75,8 @@ export const DEFAULT_PLANS: SubscriptionPlanConfig[] = [
     id: 'BUSINESS',
     name: 'Business',
     tagline: 'Pour PME structurées, distribution, transport, services et BTP',
-    monthlyPriceFCFA: 25000,
-    annualPriceFCFA: 250000, // 2 mois offerts
+    monthlyPriceFCFA: 10000,
+    annualPriceFCFA: 100000, // 2 mois offerts
     maxUsers: 15,
     maxStorageMB: 51200, // 50 Go
     popular: true,
@@ -110,8 +110,8 @@ export const DEFAULT_PLANS: SubscriptionPlanConfig[] = [
     id: 'PREMIUM',
     name: 'Premium',
     tagline: 'Pour entreprises multi-sites, industries, grands comptes et holdings',
-    monthlyPriceFCFA: 50000,
-    annualPriceFCFA: 500000, // 2 mois offerts
+    monthlyPriceFCFA: 20000,
+    annualPriceFCFA: 200000, // 2 mois offerts
     maxUsers: 50,
     maxStorageMB: 102400, // 100 Go
     badge: 'Entreprise & Illimité',

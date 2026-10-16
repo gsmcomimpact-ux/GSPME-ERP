@@ -412,7 +412,7 @@ export function AdminModule({
                 <span className="text-slate-500 font-medium">Cycle {tenant.billingCycle || 'MENSUEL'}</span>
               </div>
               <h3 className="text-lg font-black text-slate-900 mt-1">
-                Formule {tenant.subscriptionPlan} — {formatMoney(tenant.monthlySubscriptionAmount || 15000, tenant.currency)} / mois
+                Formule {tenant.subscriptionPlan} — {formatMoney(tenant.monthlySubscriptionAmount ?? 5000, tenant.currency)} / mois
               </h3>
               <p className="text-slate-500 text-[11px] mt-0.5">
                 Valide jusqu'au {tenant.subscriptionExpiresAt ? new Date(tenant.subscriptionExpiresAt).toLocaleDateString('fr-FR') : '31/12/2026'} · Renouvellement automatique par Mobile Money / Carte
