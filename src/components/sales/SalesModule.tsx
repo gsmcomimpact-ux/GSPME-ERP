@@ -18,7 +18,8 @@ import {
   Building,
   User,
   ExternalLink,
-  QrCode
+  QrCode,
+  Download,
 } from 'lucide-react';
 import {
   Tenant,
@@ -33,6 +34,7 @@ import { formatMoney } from '../../services/currency';
 import { Modal, SegmentedTabs, StatusIndicator, EmptyState } from '../common/UIComponents';
 import { createSalesJournalEntry, createPaymentJournalEntry } from '../../services/accountingEngine';
 import { storage } from '../../services/storage';
+import { PdfService } from '../../services/pdfService';
 
 interface SalesModuleProps {
   tenant: Tenant;
@@ -408,6 +410,13 @@ export function SalesModule({
                             </button>
                           )}
                           <button
+                            onClick={() => PdfService.downloadInvoicePdf(inv, tenant)}
+                            className="p-1.5 text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 rounded transition-colors cursor-pointer"
+                            title="Télécharger la Facture PDF"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                          </button>
+                          <button
                             onClick={() => setSelectedInvoiceForPrint(inv)}
                             className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded transition-colors cursor-pointer"
                             title="Aperçu & Impression Facture OHADA"
@@ -474,8 +483,16 @@ export function SalesModule({
                           <ArrowRight className="w-3 h-3" />
                         </button>
                         <button
+                          onClick={() => PdfService.downloadInvoicePdf(quote, tenant)}
+                          className="p-1 text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 rounded cursor-pointer transition-colors"
+                          title="Télécharger le Devis PDF"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                        </button>
+                        <button
                           onClick={() => setSelectedInvoiceForPrint(quote)}
                           className="p-1 text-slate-400 hover:text-slate-700 rounded cursor-pointer"
+                          title="Aperçu & Impression Devis OHADA"
                         >
                           <Printer className="w-3.5 h-3.5" />
                         </button>
@@ -985,7 +1002,7 @@ export function SalesModule({
               </div>
             </div>
 
-            {/* Print action button */}
+            {/* Print & PDF action buttons */}
             <div className="flex justify-end gap-3 no-print">
               <button
                 onClick={() => setSelectedInvoiceForPrint(null)}
@@ -994,11 +1011,19 @@ export function SalesModule({
                 Fermer
               </button>
               <button
-                onClick={() => window.print()}
-                className="px-5 py-2 bg-[#0F5132] hover:bg-[#0c4028] text-white font-semibold rounded-lg flex items-center gap-2 cursor-pointer shadow-xs"
+                onClick={() => PdfService.downloadInvoicePdf(selectedInvoiceForPrint, tenant)}
+                className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold rounded-lg flex items-center gap-2 cursor-pointer shadow-xs transition-colors"
+                title="Générer et télécharger le document PDF vectoriel conforme OHADA"
+              >
+                <Download className="w-4 h-4" />
+                <span>Télécharger le Fichier PDF</span>
+              </button>
+              <button
+                onClick={() => PdfService.printCurrent()}
+                className="px-5 py-2 bg-[#0F5132] hover:bg-[#0c4028] text-white font-semibold rounded-lg flex items-center gap-2 cursor-pointer shadow-xs transition-colors"
               >
                 <Printer className="w-4 h-4" />
-                <span>Imprimer la Facture (PDF)</span>
+                <span>Imprimer</span>
               </button>
             </div>
           </div>

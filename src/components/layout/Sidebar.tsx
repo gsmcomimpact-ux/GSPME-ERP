@@ -24,6 +24,7 @@ import {
   ShieldAlert,
   ShieldCheck,
   ChevronRight,
+  ChevronLeft,
   Globe2,
 } from 'lucide-react';
 import { Tenant } from '../../types';
@@ -121,24 +122,45 @@ export function Sidebar({
       <div>
         <div className="h-14 px-4 flex items-center justify-between border-b border-white/10">
           {!collapsed ? (
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-[#D4AF37] flex items-center justify-center font-black text-[#0F5132] text-base shadow-xs">
-                G
-              </div>
-              <div>
-                <div className="font-extrabold tracking-tight text-sm text-white flex items-center gap-1.5">
-                  <span>GSPME</span>
-                  <span className="text-[10px] font-semibold text-[#D4AF37] tracking-widest uppercase">
-                    ERP
-                  </span>
+            <>
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl overflow-hidden bg-white p-0.5 border border-white/20 shadow-xs shrink-0">
+                  <img
+                    src="/src/assets/images/gspme_logo.jpg"
+                    alt="GSPME-ERP"
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-contain rounded-lg"
+                  />
                 </div>
-                <div className="text-[10px] text-white/60">Gestion PME Africaines</div>
+                <div>
+                  <div className="font-black tracking-tight text-sm text-white flex items-center">
+                    <span>GSPME</span>
+                    <span className="text-[#D4AF37]">-ERP</span>
+                  </div>
+                  <div className="text-[9px] text-white/70 font-medium">Croissance connectée</div>
+                </div>
               </div>
-            </div>
+              <button
+                onClick={onToggleCollapse}
+                className="p-1 rounded text-white/60 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                title="Réduire la barre latérale"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+            </>
           ) : (
-            <div className="mx-auto w-8 h-8 rounded-lg bg-[#D4AF37] flex items-center justify-center font-bold text-[#0F5132] text-base">
-              G
-            </div>
+            <button
+              onClick={onToggleCollapse}
+              className="mx-auto w-9 h-9 rounded-xl overflow-hidden bg-white p-0.5 border border-white/20 shadow-xs cursor-pointer hover:opacity-90 transition-opacity flex items-center justify-center"
+              title="Agrandir la barre latérale"
+            >
+              <img
+                src="/src/assets/images/gspme_logo.jpg"
+                alt="GSPME-ERP"
+                referrerPolicy="no-referrer"
+                className="w-full h-full object-contain rounded-lg"
+              />
+            </button>
           )}
         </div>
 

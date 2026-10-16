@@ -40,12 +40,21 @@ export function LoginScreen({ users, tenants, onLogin, onCancel }: LoginScreenPr
       <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden text-xs">
         {/* Top Header */}
         <div className="bg-[#0F5132] text-white p-6 text-center space-y-1">
-          <div className="w-10 h-10 rounded-xl bg-[#D4AF37] text-[#0F5132] font-black text-xl flex items-center justify-center mx-auto shadow-sm">
-            G
+          <div className="w-14 h-14 rounded-2xl bg-white p-1 border border-white/20 shadow-md mx-auto overflow-hidden">
+            <img
+              src="/src/assets/images/gspme_logo.jpg"
+              alt="GSPME-ERP"
+              referrerPolicy="no-referrer"
+              className="w-full h-full object-contain rounded-xl"
+            />
           </div>
-          <h2 className="text-base font-extrabold tracking-tight mt-2">GSPME · Connexion Sécurisée</h2>
+          <h2 className="text-base font-extrabold tracking-tight mt-2 flex items-center justify-center gap-1">
+            <span>GSPME</span>
+            <span className="text-[#D4AF37]">-ERP</span>
+            <span className="text-white/80 font-normal">· Connexion</span>
+          </h2>
           <p className="text-[11px] text-white/80">
-            Plateforme SaaS de Gestion Intégrée des PME Africaines
+            Croissance connectée & Gestion Intégrée des PME Africaines
           </p>
         </div>
 

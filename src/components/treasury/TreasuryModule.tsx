@@ -16,7 +16,8 @@ import {
   CheckCircle2,
   DollarSign,
   TrendingUp,
-  ShieldCheck
+  ShieldCheck,
+  AlertCircle,
 } from 'lucide-react';
 import { Tenant, TreasuryAccount, TreasuryTransaction, Role } from '../../types';
 import { formatMoney } from '../../services/currency';
@@ -95,10 +96,13 @@ export function TreasuryModule({
     setReference('');
   };
 
+  const [transferError, setTransferError] = useState<string | null>(null);
+
   const handleInternalTransferSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setTransferError(null);
     if (fromAccountId === toAccountId) {
-      alert('Veuillez sélectionner deux comptes distincts.');
+      setTransferError('Veuillez sélectionner deux comptes distincts.');
       return;
     }
 
@@ -107,7 +111,7 @@ export function TreasuryModule({
     if (!fromAcc || !toAcc || transferAmount <= 0) return;
 
     if (transferAmount > fromAcc.balance) {
-      alert('Solde insuffisant sur le compte émetteur.');
+      setTransferError(`Solde insuffisant sur le compte émetteur (${formatMoney(fromAcc.balance, fromAcc.currency)} disponibles).`);
       return;
     }
 
@@ -529,6 +533,12 @@ export function TreasuryModule({
         subtitle="Transfert de fonds entre banques, caisses physiques ou portefeuilles Mobile Money"
       >
         <form onSubmit={handleInternalTransferSubmit} className="space-y-4 text-xs">
+          {transferError && (
+            <div className="p-3 bg-red-50 border border-red-200 text-red-800 rounded-lg text-xs font-semibold flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+              <span>{transferError}</span>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block font-semibold text-slate-700 mb-1">Compte Source (Débit) *</label>

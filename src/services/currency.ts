@@ -11,7 +11,7 @@ export const COUNTRY_PACKS: Record<CountryCode, CountryPack> = {
     code: 'SN',
     countryName: 'Sénégal',
     currency: 'XOF',
-    currencySymbol: 'FCFA',
+    currencySymbol: 'FR CFA',
     taxNumberLabel: 'NINEA',
     tradeRegisterLabel: 'RCCM Dakar',
     vatRateDefault: 18,
@@ -23,7 +23,7 @@ export const COUNTRY_PACKS: Record<CountryCode, CountryPack> = {
     code: 'CI',
     countryName: "Côte d'Ivoire",
     currency: 'XOF',
-    currencySymbol: 'FCFA',
+    currencySymbol: 'FR CFA',
     taxNumberLabel: 'NCC (Compte Contribuable)',
     tradeRegisterLabel: 'RCCM Abidjan',
     vatRateDefault: 18,
@@ -35,7 +35,7 @@ export const COUNTRY_PACKS: Record<CountryCode, CountryPack> = {
     code: 'CM',
     countryName: 'Cameroun',
     currency: 'XAF',
-    currencySymbol: 'FCFA',
+    currencySymbol: 'FR CFA',
     taxNumberLabel: 'NIU (Identifiant Unique)',
     tradeRegisterLabel: 'RCCM Douala',
     vatRateDefault: 19.25,
@@ -47,7 +47,7 @@ export const COUNTRY_PACKS: Record<CountryCode, CountryPack> = {
     code: 'ML',
     countryName: 'Mali',
     currency: 'XOF',
-    currencySymbol: 'FCFA',
+    currencySymbol: 'FR CFA',
     taxNumberLabel: 'NIF',
     tradeRegisterLabel: 'RCCM Bamako',
     vatRateDefault: 18,
@@ -59,7 +59,7 @@ export const COUNTRY_PACKS: Record<CountryCode, CountryPack> = {
     code: 'BJ',
     countryName: 'Bénin',
     currency: 'XOF',
-    currencySymbol: 'FCFA',
+    currencySymbol: 'FR CFA',
     taxNumberLabel: 'IFU (Identifiant Fiscal Unique)',
     tradeRegisterLabel: 'RCCM Cotonou',
     vatRateDefault: 18,
@@ -71,7 +71,7 @@ export const COUNTRY_PACKS: Record<CountryCode, CountryPack> = {
     code: 'BF',
     countryName: 'Burkina Faso',
     currency: 'XOF',
-    currencySymbol: 'FCFA',
+    currencySymbol: 'FR CFA',
     taxNumberLabel: 'IFU Ouaga',
     tradeRegisterLabel: 'RCCM Ouagadougou',
     vatRateDefault: 18,
@@ -83,7 +83,7 @@ export const COUNTRY_PACKS: Record<CountryCode, CountryPack> = {
     code: 'NE',
     countryName: 'Niger',
     currency: 'XOF',
-    currencySymbol: 'FCFA',
+    currencySymbol: 'FR CFA',
     taxNumberLabel: 'NIF Niger',
     tradeRegisterLabel: 'RCCM Niamey',
     vatRateDefault: 19,
@@ -95,7 +95,7 @@ export const COUNTRY_PACKS: Record<CountryCode, CountryPack> = {
     code: 'TG',
     countryName: 'Togo',
     currency: 'XOF',
-    currencySymbol: 'FCFA',
+    currencySymbol: 'FR CFA',
     taxNumberLabel: 'NIF Togo',
     tradeRegisterLabel: 'RCCM Lomé',
     vatRateDefault: 18,
@@ -119,16 +119,19 @@ export const COUNTRY_PACKS: Record<CountryCode, CountryPack> = {
 
 export function formatMoney(amount: number, currency: string = 'XOF'): string {
   if (isNaN(amount) || amount === null || amount === undefined) {
-    return '0 FCFA';
+    return '0 FR CFA';
   }
 
   const isZeroDecimal = ['XOF', 'XAF', 'GNF'].includes(currency);
-  const formattedNumber = new Intl.NumberFormat('fr-FR', {
-    maximumFractionDigits: isZeroDecimal ? 0 : 2,
-    minimumFractionDigits: isZeroDecimal ? 0 : 2,
-  }).format(amount);
+  const roundedAmount = isZeroDecimal ? Math.round(amount) : amount;
+  const parts = Math.abs(roundedAmount).toFixed(isZeroDecimal ? 0 : 2).split('.');
+  const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  const sign = amount < 0 ? '-' : '';
+  const formattedNumber = isZeroDecimal ? `${sign}${integerPart}` : `${sign}${integerPart},${parts[1]}`;
 
-  if (currency === 'XOF' || currency === 'XAF') return `${formattedNumber} FCFA`;
+  if (currency === 'XOF' || currency === 'XAF' || currency === 'FCFA' || currency === 'FR CFA') {
+    return `${formattedNumber} FR CFA`;
+  }
   if (currency === 'GNF') return `${formattedNumber} GNF`;
   if (currency === 'NGN') return `₦${formattedNumber}`;
   if (currency === 'GHS') return `GH₵${formattedNumber}`;
@@ -138,5 +141,9 @@ export function formatMoney(amount: number, currency: string = 'XOF'): string {
 }
 
 export function formatNumber(val: number): string {
-  return new Intl.NumberFormat('fr-FR').format(val);
+  if (isNaN(val) || val === null || val === undefined) return '0';
+  const parts = Math.abs(Math.round(val)).toString().split('.');
+  const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  const sign = val < 0 ? '-' : '';
+  return parts.length > 1 ? `${sign}${integerPart},${parts[1]}` : `${sign}${integerPart}`;
 }

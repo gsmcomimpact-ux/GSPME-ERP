@@ -50,7 +50,7 @@ export const INITIAL_TENANTS: Tenant[] = [
     subscriptionPlan: 'PREMIUM',
     subscriptionStatus: 'ACTIVE',
     billingCycle: 'ANNUEL',
-    monthlySubscriptionAmount: 25000,
+    monthlySubscriptionAmount: 50000,
     maxUsers: 50,
     maxStorageMB: 102400,
     activeModules: [
@@ -105,9 +105,9 @@ export const INITIAL_TENANTS: Tenant[] = [
     subscriptionPlan: 'BUSINESS',
     subscriptionStatus: 'ACTIVE',
     billingCycle: 'MENSUEL',
-    monthlySubscriptionAmount: 15000,
+    monthlySubscriptionAmount: 25000,
     maxUsers: 15,
-    maxStorageMB: 20480,
+    maxStorageMB: 51200,
     activeModules: ['dashboard', 'crm', 'sales', 'purchases', 'inventory', 'pos', 'accounting', 'treasury', 'tax', 'payroll', 'projects'],
     currentBranchId: 'branch-abj-1',
     branches: [
@@ -139,9 +139,9 @@ export const INITIAL_TENANTS: Tenant[] = [
     subscriptionPlan: 'ESSENTIEL',
     subscriptionStatus: 'ACTIVE',
     billingCycle: 'MENSUEL',
-    monthlySubscriptionAmount: 10000,
+    monthlySubscriptionAmount: 15000,
     maxUsers: 5,
-    maxStorageMB: 5120,
+    maxStorageMB: 10240,
     activeModules: ['dashboard', 'crm', 'sales', 'purchases', 'inventory', 'pos', 'treasury'],
     currentBranchId: 'branch-dla-1',
     branches: [

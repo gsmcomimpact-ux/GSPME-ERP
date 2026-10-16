@@ -28,6 +28,7 @@ import {
   Edit2,
   Save,
   Check,
+  Download,
 } from 'lucide-react';
 import {
   Tenant,
@@ -41,13 +42,15 @@ import { COUNTRY_PACKS, formatMoney } from '../../services/currency';
 import { SegmentedTabs } from '../common/UIComponents';
 import { storage } from '../../services/storage';
 import { subscriptionService } from '../../services/subscriptionService';
+import { PdfService } from '../../services/pdfService';
 
 interface SaasAdminModuleProps {
   tenants: Tenant[];
   onSelectTenant: (id: string) => void;
+  onOpenPublicSite?: () => void;
 }
 
-export function SaasAdminModule({ tenants, onSelectTenant }: SaasAdminModuleProps) {
+export function SaasAdminModule({ tenants, onSelectTenant, onOpenPublicSite }: SaasAdminModuleProps) {
   const [activeTab, setActiveTab] = useState<
     'monetisation' | 'offres' | 'commandes' | 'entreprises' | 'prospects' | 'packs'
   >('monetisation');
@@ -113,6 +116,16 @@ export function SaasAdminModule({ tenants, onSelectTenant }: SaasAdminModuleProp
         </div>
 
         <div className="flex items-center gap-2">
+          {onOpenPublicSite && (
+            <button
+              onClick={onOpenPublicSite}
+              className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Consulter le site vitrine et tester les tarifs"
+            >
+              <Globe2 className="w-3.5 h-3.5 text-[#D4AF37]" />
+              <span>Voir le Site Public & Tarifs</span>
+            </button>
+          )}
           <span className="text-[11px] font-semibold text-emerald-400 bg-emerald-950 px-2.5 py-1 rounded border border-emerald-800 flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <span>Passerelles Mobile Money & Cartes Opérationnelles</span>
@@ -414,6 +427,7 @@ export function SaasAdminModule({ tenants, onSelectTenant }: SaasAdminModuleProp
                   <th className="py-3 px-4 font-semibold">Réf. Transaction</th>
                   <th className="py-3 px-4 font-semibold text-right">Montant TTC</th>
                   <th className="py-3 px-4 font-semibold text-center">Statut</th>
+                  <th className="py-3 px-4 font-semibold text-center">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -441,6 +455,16 @@ export function SaasAdminModule({ tenants, onSelectTenant }: SaasAdminModuleProp
                       <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded">
                         CONFIRMÉ
                       </span>
+                    </td>
+                    <td className="py-3 px-4 text-center">
+                      <button
+                        onClick={() => PdfService.downloadSubscriptionInvoicePdf(o)}
+                        className="px-2.5 py-1 text-[#0F5132] hover:bg-[#0F5132]/10 rounded font-semibold text-[11px] cursor-pointer flex items-center gap-1 mx-auto transition-colors"
+                        title="Télécharger la facture SaaS certifiée en PDF"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Facture PDF</span>
+                      </button>
                     </td>
                   </tr>
                 ))}

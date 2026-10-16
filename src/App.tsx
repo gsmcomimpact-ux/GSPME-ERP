@@ -59,8 +59,8 @@ import { QuickCreateModal } from './components/common/QuickCreateModal';
 import { RotateCcw, ShieldCheck, Sparkles } from 'lucide-react';
 
 export default function App() {
-  // Navigation & UI State
-  const [viewMode, setViewMode] = useState<'ERP' | 'PUBLIC_SITE'>('ERP');
+  // Navigation & UI State (La page d'accueil par défaut est le Site Public & Tarifs)
+  const [viewMode, setViewMode] = useState<'ERP' | 'PUBLIC_SITE'>('PUBLIC_SITE');
   const [activeModule, setActiveModule] = useState<NavModule>('dashboard');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [globalSearch, setGlobalSearch] = useState('');
@@ -218,6 +218,7 @@ export default function App() {
           onSearchChange={setGlobalSearch}
           onOpenNewTenantModal={() => setNewTenantModalOpen(true)}
           onOpenPublicSite={() => setViewMode('PUBLIC_SITE')}
+          onNavigate={setActiveModule}
         />
 
         {/* Content Area */}
@@ -236,6 +237,13 @@ export default function App() {
             </div>
 
             <div className="flex items-center gap-3">
+              <button
+                onClick={() => setViewMode('PUBLIC_SITE')}
+                title="Consulter le site public, les tarifs et la FAQ"
+                className="text-[11px] font-bold text-[#0F5132] hover:text-[#0c4028] bg-emerald-50 hover:bg-emerald-100/80 px-2.5 py-1 rounded-md border border-emerald-200/80 flex items-center gap-1.5 cursor-pointer transition-colors"
+              >
+                <span>← Site Public & Tarifs</span>
+              </button>
               <span className="text-[11px] text-[#0F5132] font-semibold flex items-center gap-1">
                 <ShieldCheck className="w-3.5 h-3.5 text-[#D4AF37]" />
                 <span>Norme SYSCOHADA Révisé</span>
@@ -425,6 +433,7 @@ export default function App() {
             <SaasAdminModule
               tenants={tenants}
               onSelectTenant={handleSelectTenant}
+              onOpenPublicSite={() => setViewMode('PUBLIC_SITE')}
             />
           )}
         </main>

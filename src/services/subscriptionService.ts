@@ -19,38 +19,38 @@ import {
 import { COUNTRY_PACKS } from './currency';
 import { storage } from './storage';
 
-// 4 Offres officielles configurables GSPME
+// 4 Offres officielles configurables GSPME : Gratuit, 15 000, 25 000 et 50 000 FCFA
 export const DEFAULT_PLANS: SubscriptionPlanConfig[] = [
   {
     id: 'STARTER',
-    name: 'Starter',
-    tagline: 'Pour micro-entreprises, artisans et entrepreneurs individuels',
-    monthlyPriceFCFA: 5000,
-    annualPriceFCFA: 50000, // 2 mois offerts
+    name: 'Gratuit',
+    tagline: 'Pour démarrer sans frais : artisans, micro-activités et auto-entrepreneurs',
+    monthlyPriceFCFA: 0,
+    annualPriceFCFA: 0,
     maxUsers: 2,
-    maxStorageMB: 2048,
-    badge: 'Démarrage',
+    maxStorageMB: 5120, // 5 Go
+    badge: '100% Gratuit',
     allowedModules: ['dashboard', 'crm', 'sales', 'pos', 'treasury'],
     features: [
+      'Accès gratuit sans carte bancaire ni engagement',
       'Jusqu’à 2 utilisateurs simultanés',
-      'Facturation commerciale & devis illimités',
+      '5 Go d’espace de stockage sécurisé',
+      'Facturation commerciale & devis essentiels',
       'Point de vente tactile (POS) & reçus',
       'Suivi de caisse physique & Mobile Money',
       'Fiches clients CRM & historique',
-      'Export PDF & Excel des factures',
-      'Support par email standard (48h)',
+      'Support par email & centre d’aide',
     ],
   },
   {
     id: 'ESSENTIEL',
     name: 'Essentiel',
-    tagline: 'Pour PME de commerce, distribution et prestataires de services',
-    monthlyPriceFCFA: 10000,
-    annualPriceFCFA: 100000, // 2 mois offerts
+    tagline: 'Pour commerçants, boutiques, prestataires et TPE en pleine croissance',
+    monthlyPriceFCFA: 15000,
+    annualPriceFCFA: 150000, // 2 mois offerts
     maxUsers: 5,
-    maxStorageMB: 5120,
-    popular: true,
-    badge: 'Plus Populaire',
+    maxStorageMB: 10240, // 10 Go
+    badge: 'Essentiel PME',
     allowedModules: [
       'dashboard',
       'crm',
@@ -62,23 +62,25 @@ export const DEFAULT_PLANS: SubscriptionPlanConfig[] = [
     ],
     features: [
       'Jusqu’à 5 utilisateurs avec rôles distincts',
-      'Tous les avantages de la formule Starter',
+      '10 Go d’espace de stockage sécurisé',
+      'Tous les avantages de la formule Gratuite',
       'Achats & gestion complète des fournisseurs',
       'Gestion des stocks & valorisation au PUMP',
       'Alertes automatiques de stock minimum',
-      'Multi-comptes bancaires & Mobile Money (Wave, OM)',
+      'Multi-comptes bancaires & Mobile Money (Wave, OM, MoMo)',
       'Support prioritaire par WhatsApp (24h)',
     ],
   },
   {
     id: 'BUSINESS',
     name: 'Business',
-    tagline: 'Pour PME structurées, sociétés de BTP, transport et cabinets',
-    monthlyPriceFCFA: 15000,
-    annualPriceFCFA: 150000, // 2 mois offerts
+    tagline: 'Pour PME structurées, distribution, transport, services et BTP',
+    monthlyPriceFCFA: 25000,
+    annualPriceFCFA: 250000, // 2 mois offerts
     maxUsers: 15,
-    maxStorageMB: 20480,
-    badge: 'Recommandé PME',
+    maxStorageMB: 51200, // 50 Go
+    popular: true,
+    badge: 'Plus Populaire',
     allowedModules: [
       'dashboard',
       'crm',
@@ -94,8 +96,9 @@ export const DEFAULT_PLANS: SubscriptionPlanConfig[] = [
     ],
     features: [
       'Jusqu’à 15 utilisateurs & multi-agences',
+      '50 Go d’espace de stockage haute capacité',
       'Tous les avantages de la formule Essentiel',
-      'Comptabilité générale SYSCOHADA Révisé',
+      'Comptabilité générale SYSCOHADA Révisé 2026',
       'Livre-journal, Grand livre & Balance 4 colonnes',
       'Module Paie & Déclarations sociales UEMOA/OHADA',
       'Déclaration de TVA automatique & calendrier fiscal',
@@ -106,12 +109,12 @@ export const DEFAULT_PLANS: SubscriptionPlanConfig[] = [
   {
     id: 'PREMIUM',
     name: 'Premium',
-    tagline: 'Pour groupes, PME industrielles et entreprises multi-sites',
-    monthlyPriceFCFA: 25000,
-    annualPriceFCFA: 250000, // 2 mois offerts
+    tagline: 'Pour entreprises multi-sites, industries, grands comptes et holdings',
+    monthlyPriceFCFA: 50000,
+    annualPriceFCFA: 500000, // 2 mois offerts
     maxUsers: 50,
-    maxStorageMB: 102400,
-    badge: 'Tout-en-Un Intégral',
+    maxStorageMB: 102400, // 100 Go
+    badge: 'Entreprise & Illimité',
     allowedModules: [
       'dashboard',
       'crm',
@@ -131,13 +134,14 @@ export const DEFAULT_PLANS: SubscriptionPlanConfig[] = [
     ],
     features: [
       'Jusqu’à 50 utilisateurs & multi-établissements illimités',
+      '100 Go d’espace de stockage sécurisé haute performance',
       'Tous les modules GSPME sans aucune restriction',
       'Gestion des Immobilisations & tableau d’amortissement',
       'GED complète (Gestion Électronique des Documents)',
       'Rapports décisionnels avancés & BI comparative',
       'Assistant IA GSPME (détection d’anomalies & trésorerie)',
       'Sauvegardes certifiées horaires & isolation dédiée',
-      'Accompagnement personnalisé & Account Manager dédié',
+      'Accompagnement personnalisé & Account Manager dédié 24/7',
     ],
   },
 ];
@@ -154,10 +158,10 @@ const INITIAL_SUBSCRIPTION_ORDERS: SubscriptionOrder[] = [
     countryCode: 'SN',
     planId: 'PREMIUM',
     billingCycle: 'ANNUEL',
-    amountHT: 250000,
+    amountHT: 500000,
     vatRate: 18,
-    vatAmount: 45000,
-    amountTTC: 295000,
+    vatAmount: 90000,
+    amountTTC: 590000,
     currency: 'XOF',
     paymentMethod: 'CARTE_BANCAIRE',
     transactionReference: 'TXN-GIM-20260115-8842',
@@ -176,10 +180,10 @@ const INITIAL_SUBSCRIPTION_ORDERS: SubscriptionOrder[] = [
     countryCode: 'CI',
     planId: 'BUSINESS',
     billingCycle: 'MENSUEL',
-    amountHT: 15000,
+    amountHT: 25000,
     vatRate: 18,
-    vatAmount: 2700,
-    amountTTC: 17700,
+    vatAmount: 4500,
+    amountTTC: 29500,
     currency: 'XOF',
     paymentMethod: 'ORANGE_MONEY',
     paymentPhoneNumber: '+225 07 08 09 10 11',
@@ -199,10 +203,10 @@ const INITIAL_SUBSCRIPTION_ORDERS: SubscriptionOrder[] = [
     countryCode: 'CM',
     planId: 'ESSENTIEL',
     billingCycle: 'MENSUEL',
-    amountHT: 10000,
+    amountHT: 15000,
     vatRate: 19.25,
-    vatAmount: 1925,
-    amountTTC: 11925,
+    vatAmount: 2888,
+    amountTTC: 17888,
     currency: 'XAF',
     paymentMethod: 'MTN_MOMO',
     paymentPhoneNumber: '+237 699 01 23 45',
@@ -242,8 +246,8 @@ const INITIAL_SUPPORT_INQUIRIES: SupportInquiry[] = [
 ];
 
 class SubscriptionService {
-  private plansKey = 'gspme_saas_plans_config';
-  private ordersKey = 'gspme_subscription_orders';
+  private plansKey = 'gspme_saas_plans_config_v5';
+  private ordersKey = 'gspme_subscription_orders_v2';
   private inquiriesKey = 'gspme_support_inquiries';
 
   constructor() {
@@ -252,7 +256,17 @@ class SubscriptionService {
 
   private ensureInitialized() {
     try {
-      if (!localStorage.getItem(this.plansKey)) {
+      const stored = localStorage.getItem(this.plansKey);
+      if (
+        !stored ||
+        stored.includes('"maxStorageMB":1024') ||
+        stored.includes('"maxStorageMB": 1024') ||
+        stored.includes('"maxStorageMB":20480') ||
+        stored.includes('"maxStorageMB": 20480') ||
+        stored.includes('"monthlyPriceFCFA":5000') ||
+        !stored.includes('"maxStorageMB":51200') ||
+        !stored.includes('"maxStorageMB": 51200')
+      ) {
         localStorage.setItem(this.plansKey, JSON.stringify(DEFAULT_PLANS));
       }
       if (!localStorage.getItem(this.ordersKey)) {
@@ -323,6 +337,7 @@ class SubscriptionService {
     adminEmail: string;
     adminPhone: string;
     adminPassword?: string;
+    logoUrl?: string;
     paymentMethod: PaymentGatewayType;
     paymentPhoneNumber?: string;
   }): Promise<{ tenant: Tenant; user: User; order: SubscriptionOrder }> {
@@ -378,6 +393,7 @@ class SubscriptionService {
       name: params.companyName,
       tradeName: params.companyName,
       legalForm: params.legalForm,
+      logoUrl: params.logoUrl || '/src/assets/images/gspme_logo.jpg',
       countryCode: params.countryCode,
       taxNumber: params.taxNumber || `${countryPack.taxNumberLabel} En cours`,
       tradeRegisterNumber: params.tradeRegisterNumber || 'RCCM En cours',

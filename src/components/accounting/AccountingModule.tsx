@@ -15,13 +15,16 @@ import {
   FileText,
   TrendingUp,
   Download,
-  Building
+  Building,
+  AlertCircle,
+  Printer,
 } from 'lucide-react';
 import { Tenant, JournalEntry, Role, OHADAAccount } from '../../types';
 import { SYSCOHADA_PLAN_COMPTABLE } from '../../services/accountingEngine';
 import { formatMoney } from '../../services/currency';
 import { Modal, SegmentedTabs } from '../common/UIComponents';
 import { storage } from '../../services/storage';
+import { PdfService } from '../../services/pdfService';
 
 interface AccountingModuleProps {
   tenant: Tenant;
@@ -111,13 +114,16 @@ export function AccountingModule({
   const ebe = valeurAjoutee - chargesPersonnel661;
   const resultatNetEstime = ebe;
 
+  const [entryError, setEntryError] = useState<string | null>(null);
+
   const handleManualEntrySubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setEntryError(null);
     const sumDebit = entryLines.reduce((s, l) => s + l.debit, 0);
     const sumCredit = entryLines.reduce((s, l) => s + l.credit, 0);
 
     if (Math.abs(sumDebit - sumCredit) > 0.01) {
-      alert(`L'écriture n'est pas équilibrée ! Débit : ${sumDebit} != Crédit : ${sumCredit}`);
+      setEntryError(`L'écriture n'est pas équilibrée ! Débit (${formatMoney(sumDebit, tenant.currency)}) != Crédit (${formatMoney(sumCredit, tenant.currency)})`);
       return;
     }
 
@@ -316,11 +322,12 @@ export function AccountingModule({
               <p className="text-slate-500 text-[11px]">Exercice en cours · {tenant.name}</p>
             </div>
             <button
-              onClick={() => window.print()}
-              className="px-3 py-1.5 border border-slate-300 rounded text-slate-700 hover:bg-slate-100 flex items-center gap-1.5 cursor-pointer"
+              onClick={() => PdfService.printCurrent()}
+              className="px-3 py-1.5 border border-slate-300 rounded text-slate-700 hover:bg-slate-100 flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
+              title="Imprimer la Balance Générale"
             >
-              <Download className="w-3.5 h-3.5" />
-              <span>Exporter / Imprimer</span>
+              <Printer className="w-3.5 h-3.5" />
+              <span>Imprimer la Balance</span>
             </button>
           </div>
 
@@ -572,6 +579,12 @@ export function AccountingModule({
         maxWidth="2xl"
       >
         <form onSubmit={handleManualEntrySubmit} className="space-y-4 text-xs">
+          {entryError && (
+            <div className="p-3 bg-red-50 border border-red-200 text-red-800 rounded-lg text-xs font-semibold flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+              <span>{entryError}</span>
+            </div>
+          )}
           <div className="grid grid-cols-3 gap-3">
             <div>
               <label className="block font-semibold text-slate-700 mb-1">Journal *</label>

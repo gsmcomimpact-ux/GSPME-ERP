@@ -5,6 +5,7 @@
  */
 
 import React, { useState } from 'react';
+import { Upload, Image as ImageIcon, Trash2 } from 'lucide-react';
 import { Tenant, CountryCode } from '../../types';
 import { COUNTRY_PACKS } from '../../services/currency';
 import { Modal } from './UIComponents';
@@ -27,6 +28,26 @@ export function NewTenantModal({ isOpen, onClose, onTenantCreated }: NewTenantMo
   const [phone, setPhone] = useState('+221 ');
   const [email, setEmail] = useState('');
   const [capitalSocial, setCapitalSocial] = useState(10000000);
+  const [logoUrl, setLogoUrl] = useState<string>('');
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 3 * 1024 * 1024) {
+      alert("Veuillez sélectionner un fichier d'image inférieur à 3 Mo.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      if (result) {
+        setLogoUrl(result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   const pack = COUNTRY_PACKS[countryCode];
 
@@ -49,6 +70,7 @@ export function NewTenantModal({ isOpen, onClose, onTenantCreated }: NewTenantMo
       id: newId,
       name,
       legalForm,
+      logoUrl: logoUrl || '/src/assets/images/gspme_logo.jpg',
       countryCode,
       taxNumber: taxNumber || `${pack.taxNumberLabel} 000${Math.floor(100000 + Math.random() * 900000)}`,
       tradeRegisterNumber: tradeRegisterNumber || `${pack.tradeRegisterLabel} 2026-B-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -194,6 +216,59 @@ export function NewTenantModal({ isOpen, onClose, onTenantCreated }: NewTenantMo
               onChange={e => setCapitalSocial(parseFloat(e.target.value) || 0)}
               className="w-full p-2 border border-slate-300 rounded-lg font-bold"
             />
+          </div>
+        </div>
+
+        {/* Logo de l'Entreprise */}
+        <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="block font-semibold text-slate-800 text-xs">
+              Logo Officiel de l'Entreprise (Optionnel)
+            </label>
+            {logoUrl && (
+              <button
+                type="button"
+                onClick={() => setLogoUrl('')}
+                className="text-red-600 hover:text-red-700 text-[11px] font-semibold flex items-center gap-1 cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Retirer</span>
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="w-16 h-16 rounded-lg bg-white border border-slate-200 flex items-center justify-center overflow-hidden shrink-0 shadow-2xs">
+              {logoUrl ? (
+                <img
+                  src={logoUrl}
+                  alt="Aperçu logo"
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-contain p-1"
+                />
+              ) : (
+                <div className="text-center p-1 text-slate-400">
+                  <ImageIcon className="w-5 h-5 mx-auto text-slate-300" />
+                  <span className="text-[8px] block">Aucun</span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex-1 space-y-1.5 text-left">
+              <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 rounded-lg font-semibold text-xs cursor-pointer shadow-2xs transition-colors">
+                <Upload className="w-3.5 h-3.5 text-[#0F5132]" />
+                <span>{logoUrl ? "Changer le logo" : "Téléverser mon logo"}</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleLogoUpload}
+                  className="hidden"
+                />
+              </label>
+              <div className="text-[10px] text-slate-500">
+                Format PNG, JPG ou SVG. Imprimé sur vos factures et devis.
+              </div>
+            </div>
           </div>
         </div>
 
