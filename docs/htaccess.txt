@@ -1,0 +1,34 @@
+# GSPME - .htaccess pour iFastNet (cPanel / CloudLinux "Setup Node.js App")
+# Emplacement : racine web du domaine (ex. public_html/.htaccess), PAS dans ~/gspme.
+# Renommez ce fichier en ".htaccess" et remplacez VOTRE_UTILISATEUR_CPANEL.
+#
+# NB : le bloc PASSENGER est normalement ajouté automatiquement par cPanel quand vous
+# cliquez sur "Create" dans "Setup Node.js App". S'il existe déjà, gardez celui de cPanel
+# et ajoutez seulement les sections HTTPS / en-têtes / compression ci-dessous.
+
+# DO NOT REMOVE. CLOUDLINUX PASSENGER CONFIGURATION BEGIN
+PassengerAppRoot "/home/VOTRE_UTILISATEUR_CPANEL/gspme"
+PassengerBaseURI "/"
+PassengerNodejs "/home/VOTRE_UTILISATEUR_CPANEL/nodevenv/gspme/20/bin/node"
+PassengerAppType node
+PassengerStartupFile server.js
+# DO NOT REMOVE. CLOUDLINUX PASSENGER CONFIGURATION END
+
+# Forcer HTTPS
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{HTTP:X-Forwarded-Proto} !https
+  RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+</IfModule>
+
+# En-têtes de sécurité
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set Strict-Transport-Security "max-age=31536000"
+</IfModule>
+
+# Compression
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css application/javascript application/json image/svg+xml
+</IfModule>
