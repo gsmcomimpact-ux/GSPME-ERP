@@ -1,5 +1,5 @@
 /**
- * GSPME SaaS - API REST multi-tenant (Express + SQLite)
+ * GSPME SaaS - API REST multi-tenant (Express + MySQL)
  * Lancement : npm run server   |   Production : npm run build && npm start
  */
 import 'dotenv/config';
@@ -7,7 +7,7 @@ import express, { type NextFunction, type Request, type Response } from 'express
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { APP_DIR, db, transaction } from './db.ts';
+import { APP_DIR, all, initDb, one, run, transaction } from './db.ts';
 import {
   type AuthedRequest,
   hashPassword,
@@ -73,10 +73,12 @@ const toUser = (u: UserRow) => ({
   id: u.id, tenantId: u.tenant_id, name: u.name, email: u.email, role: u.role,
   active: !!u.active, lastLogin: u.last_login || '',
 });
-const getTenant = (id: string): Row | null => {
-  const r = db.prepare('SELECT data FROM tenants WHERE id = ?').get(id) as { data: string } | undefined;
+const getTenant = async (id: string): Promise<Row | null> => {
+  const r = await one<{ data: string }>('SELECT data FROM tenants WHERE id = ?', [id]);
   return r ? JSON.parse(r.data) : null;
 };
+const getUser = (id: string) => one<UserRow>('SELECT * FROM users WHERE id = ?', [id]);
+const emailTaken = async (email: string) => !!(await one('SELECT 1 AS x FROM users WHERE email = ?', [email]));
 
 // ---------------------------------------------------------------- Santé
 app.get('/api/health', (_req, res) => {
@@ -86,7 +88,7 @@ app.get('/api/health', (_req, res) => {
 // ---------------------------------------------------------------- Auth
 const authLimiter = rateLimit(20, 15 * 60 * 1000);
 
-app.post('/api/auth/register', authLimiter, asyncH((req, res) => {
+app.post('/api/auth/register', authLimiter, asyncH(async (req, res) => {
   const b = req.body || {};
   const companyName = str(b.companyName);
   const name = str(b.name);
@@ -98,7 +100,7 @@ app.post('/api/auth/register', authLimiter, asyncH((req, res) => {
   if (!companyName || !name) { res.status(400).json({ error: "Nom de l'entreprise et du dirigeant requis" }); return; }
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { res.status(400).json({ error: 'Email invalide' }); return; }
   if (password.length < 8) { res.status(400).json({ error: 'Mot de passe : 8 caractères minimum' }); return; }
-  if (db.prepare('SELECT 1 FROM users WHERE email = ?').get(email)) {
+  if (await emailTaken(email)) {
     res.status(409).json({ error: 'Un compte existe déjà avec cet email' }); return;
   }
 
@@ -118,12 +120,19 @@ app.post('/api/auth/register', authLimiter, asyncH((req, res) => {
     branches: [{ id: branchId, tenantId, name: `Siège ${city}`, city, address: str(b.address, 500), phone: str(b.phone, 50), isHeadquarters: true }],
   };
   const userId = `user-${randomUUID()}`;
-  transaction(() => {
-    db.prepare('INSERT INTO tenants (id, data) VALUES (?, ?)').run(tenantId, JSON.stringify(tenant));
-    db.prepare(
-      'INSERT INTO users (id, tenant_id, name, email, password_hash, role, last_login) VALUES (?,?,?,?,?,?,?)'
-    ).run(userId, tenantId, name, email, hashPassword(password), 'DIRECTEUR_GENERAL', now());
-  });
+  try {
+    await transaction(async conn => {
+      await run('INSERT INTO tenants (id, data) VALUES (?, ?)', [tenantId, JSON.stringify(tenant)], conn);
+      await run(
+        'INSERT INTO users (id, tenant_id, name, email, password_hash, role, last_login) VALUES (?,?,?,?,?,?,?)',
+        [userId, tenantId, name, email, hashPassword(password), 'DIRECTEUR_GENERAL', now()], conn
+      );
+    });
+  } catch (err) {
+    // Inscription simultanée avec le même email : la contrainte UNIQUE tranche.
+    if ((err as { code?: string }).code === 'ER_DUP_ENTRY') { res.status(409).json({ error: 'Un compte existe déjà avec cet email' }); return; }
+    throw err;
+  }
   const token = signToken({ id: userId, tenantId, role: 'DIRECTEUR_GENERAL' });
   res.status(201).json({ token });
 }));
@@ -131,43 +140,43 @@ app.post('/api/auth/register', authLimiter, asyncH((req, res) => {
 // Hachage factice pour égaliser le temps de réponse si l'email est inconnu
 const DUMMY_HASH = hashPassword('gspme-dummy-password');
 
-app.post('/api/auth/login', authLimiter, asyncH((req, res) => {
+app.post('/api/auth/login', authLimiter, asyncH(async (req, res) => {
   const email = str(req.body?.email).toLowerCase();
   const password = typeof req.body?.password === 'string' ? req.body.password : '';
-  const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email) as UserRow | undefined;
+  const user = await one<UserRow>('SELECT * FROM users WHERE email = ?', [email]);
   const ok = verifyPassword(password, user?.password_hash || DUMMY_HASH);
   if (!user || !ok || !user.active) { res.status(401).json({ error: 'Identifiants invalides' }); return; }
-  db.prepare('UPDATE users SET last_login = ? WHERE id = ?').run(now(), user.id);
+  await run('UPDATE users SET last_login = ? WHERE id = ?', [now(), user.id]);
   res.json({ token: signToken({ id: user.id, tenantId: user.tenant_id, role: user.role }) });
 }));
 
-app.get('/api/auth/me', requireAuth, (req, res) => {
+app.get('/api/auth/me', requireAuth, asyncH(async (req, res) => {
   const { auth } = req as AuthedRequest;
-  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(auth.sub) as UserRow | undefined;
+  const user = await getUser(auth.sub);
   if (!user || !user.active) { res.status(401).json({ error: 'Compte désactivé' }); return; }
-  res.json({ user: toUser(user), tenant: getTenant(user.tenant_id) });
-});
+  res.json({ user: toUser(user), tenant: await getTenant(user.tenant_id) });
+}));
 
 // ---------------------------------------------------------------- Synchronisation
 /** Instantané complet des données du tenant de l'utilisateur connecté. */
-app.get('/api/sync', requireAuth, (req, res) => {
+app.get('/api/sync', requireAuth, asyncH(async (req, res) => {
   const { auth } = req as AuthedRequest;
-  const me = db.prepare('SELECT * FROM users WHERE id = ?').get(auth.sub) as UserRow | undefined;
+  const me = await getUser(auth.sub);
   if (!me || !me.active) { res.status(401).json({ error: 'Compte désactivé' }); return; }
 
   const sa = me.role === 'SUPER_ADMIN_SAAS';
-  const tenantRows = (sa
-    ? db.prepare('SELECT data FROM tenants').all()
-    : db.prepare('SELECT data FROM tenants WHERE id = ?').all(me.tenant_id)) as { data: string }[];
-  const userRows = (sa
-    ? db.prepare('SELECT * FROM users').all()
-    : db.prepare('SELECT * FROM users WHERE tenant_id = ?').all(me.tenant_id)) as UserRow[];
+  const tenantRows = sa
+    ? await all<{ data: string }>('SELECT data FROM tenants')
+    : await all<{ data: string }>('SELECT data FROM tenants WHERE id = ?', [me.tenant_id]);
+  const userRows = sa
+    ? await all<UserRow>('SELECT * FROM users')
+    : await all<UserRow>('SELECT * FROM users WHERE tenant_id = ?', [me.tenant_id]);
 
   const collections: Record<string, unknown[]> = {};
   for (const name of COLLECTIONS) collections[name] = [];
-  const recs = db
-    .prepare('SELECT collection, data FROM records WHERE tenant_id = ?')
-    .all(me.tenant_id) as { collection: string; data: string }[];
+  const recs = await all<{ collection: string; data: string }>(
+    'SELECT collection, data FROM records WHERE tenant_id = ?', [me.tenant_id]
+  );
   for (const r of recs) collections[r.collection]?.push(JSON.parse(r.data));
 
   res.json({
@@ -177,16 +186,16 @@ app.get('/api/sync', requireAuth, (req, res) => {
     users: userRows.map(toUser),
     collections,
   });
-});
+}));
 
 /** Remplace le contenu d'une collection pour le tenant connecté (écriture depuis le front). */
-app.put('/api/collections/:name', requireAuth, asyncH((req, res) => {
+app.put('/api/collections/:name', requireAuth, asyncH(async (req, res) => {
   const { auth } = req as AuthedRequest;
   const name = req.params.name as string;
   const rows = req.body?.rows;
   if (!Array.isArray(rows) || rows.length > 50000) { res.status(400).json({ error: 'Champ rows invalide' }); return; }
 
-  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(auth.sub) as UserRow | undefined;
+  const user = await getUser(auth.sub);
   if (!user || !user.active) { res.status(401).json({ error: 'Compte désactivé' }); return; }
   if (user.role === 'AUDITEUR_EXTERNE') { res.status(403).json({ error: 'Accès en lecture seule' }); return; }
   const sa = user.role === 'SUPER_ADMIN_SAAS';
@@ -197,11 +206,11 @@ app.put('/api/collections/:name', requireAuth, asyncH((req, res) => {
     for (const raw of rows as Row[]) {
       if (!raw || typeof raw.id !== 'string') continue;
       if (!sa && raw.id !== tid) continue;
-      const current = getTenant(raw.id);
+      const current = await getTenant(raw.id);
       if (!current) continue;
       const next: Row = { ...current, ...raw, id: raw.id };
       if (!sa) for (const f of BILLING_FIELDS) next[f] = current[f];
-      db.prepare('UPDATE tenants SET data = ? WHERE id = ?').run(JSON.stringify(next), raw.id);
+      await run('UPDATE tenants SET data = ? WHERE id = ?', [JSON.stringify(next), raw.id]);
     }
     res.json({ ok: true }); return;
   }
@@ -211,12 +220,12 @@ app.put('/api/collections/:name', requireAuth, asyncH((req, res) => {
     if (user.role !== 'DIRECTEUR_GENERAL' && !sa) { res.status(403).json({ error: 'Réservé à la direction' }); return; }
     for (const raw of rows as Row[]) {
       const target = typeof raw?.id === 'string'
-        ? (db.prepare('SELECT * FROM users WHERE id = ?').get(raw.id) as UserRow | undefined) : undefined;
+        ? await getUser(raw.id) : undefined;
       if (!target || (!sa && target.tenant_id !== tid)) continue;
       const role = typeof raw.role === 'string' && ROLES.includes(raw.role) && (sa || raw.role !== 'SUPER_ADMIN_SAAS')
         ? raw.role : target.role;
-      db.prepare('UPDATE users SET name = ?, role = ?, active = ? WHERE id = ?')
-        .run(str(raw.name) || target.name, role, raw.active === false ? 0 : 1, target.id);
+      await run('UPDATE users SET name = ?, role = ?, active = ? WHERE id = ?',
+        [str(raw.name) || target.name, role, raw.active === false ? 0 : 1, target.id]);
     }
     res.json({ ok: true }); return;
   }
@@ -234,23 +243,27 @@ app.put('/api/collections/:name', requireAuth, asyncH((req, res) => {
     clean.push(raw);
   }
 
-  transaction(() => {
+  await transaction(async conn => {
     const ids = new Set(clean.map(r => r.id as string));
-    const existing = db.prepare('SELECT id FROM records WHERE tenant_id = ? AND collection = ?')
-      .all(tid, name) as { id: string }[];
-    const del = db.prepare('DELETE FROM records WHERE tenant_id = ? AND collection = ? AND id = ?');
-    for (const e of existing) if (!ids.has(e.id)) del.run(tid, name, e.id);
-    const upsert = db.prepare(
-      `INSERT INTO records (tenant_id, collection, id, data, updated_at) VALUES (?,?,?,?,?)
-       ON CONFLICT (tenant_id, collection, id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at`
+    const existing = await all<{ id: string }>(
+      'SELECT id FROM records WHERE tenant_id = ? AND collection = ?', [tid, name], conn
     );
-    for (const r of clean) upsert.run(tid, name, r.id as string, JSON.stringify(r), now());
+    for (const e of existing) {
+      if (!ids.has(e.id)) await run('DELETE FROM records WHERE tenant_id = ? AND collection = ? AND id = ?', [tid, name, e.id], conn);
+    }
+    for (const r of clean) {
+      await run(
+        `INSERT INTO records (tenant_id, collection, id, data) VALUES (?,?,?,?)
+         ON DUPLICATE KEY UPDATE data = VALUES(data)`,
+        [tid, name, r.id as string, JSON.stringify(r)], conn
+      );
+    }
   });
   res.json({ ok: true, count: clean.length });
 }));
 
 // ---------------------------------------------------------------- Utilisateurs
-app.post('/api/users', requireAuth, asyncH((req, res) => {
+app.post('/api/users', requireAuth, asyncH(async (req, res) => {
   const { auth } = req as AuthedRequest;
   if (auth.role !== 'DIRECTEUR_GENERAL' && auth.role !== 'SUPER_ADMIN_SAAS') {
     res.status(403).json({ error: 'Réservé à la direction' }); return;
@@ -263,17 +276,17 @@ app.post('/api/users', requireAuth, asyncH((req, res) => {
     ? b.role : 'COMMERCIAL_VENTES';
   if (!name || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { res.status(400).json({ error: 'Nom et email valides requis' }); return; }
   if (password.length < 8) { res.status(400).json({ error: 'Mot de passe : 8 caractères minimum' }); return; }
-  if (db.prepare('SELECT 1 FROM users WHERE email = ?').get(email)) { res.status(409).json({ error: 'Email déjà utilisé' }); return; }
+  if (await emailTaken(email)) { res.status(409).json({ error: 'Email déjà utilisé' }); return; }
 
-  const tenant = getTenant(auth.tid);
-  const count = (db.prepare('SELECT COUNT(*) AS n FROM users WHERE tenant_id = ? AND active = 1').get(auth.tid) as { n: number }).n;
+  const tenant = await getTenant(auth.tid);
+  const count = Number((await one<{ n: number }>('SELECT COUNT(*) AS n FROM users WHERE tenant_id = ? AND active = 1', [auth.tid]))!.n);
   if (tenant && typeof tenant.maxUsers === 'number' && count >= tenant.maxUsers) {
     res.status(402).json({ error: "Limite d'utilisateurs du plan atteinte" }); return;
   }
   const id = `user-${randomUUID()}`;
-  db.prepare('INSERT INTO users (id, tenant_id, name, email, password_hash, role) VALUES (?,?,?,?,?,?)')
-    .run(id, auth.tid, name, email, hashPassword(password), role);
-  res.status(201).json({ user: toUser(db.prepare('SELECT * FROM users WHERE id = ?').get(id) as UserRow) });
+  await run('INSERT INTO users (id, tenant_id, name, email, password_hash, role) VALUES (?,?,?,?,?,?)',
+    [id, auth.tid, name, email, hashPassword(password), role]);
+  res.status(201).json({ user: toUser((await getUser(id))!) });
 }));
 
 // ---------------------------------------------------------------- Front statique (production)
@@ -290,29 +303,39 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 });
 
 // ---------------------------------------------------------------- Amorçage super-admin
-function seedSuperAdmin() {
+async function seedSuperAdmin() {
   const email = (process.env.SUPER_ADMIN_EMAIL || '').toLowerCase();
   const password = process.env.SUPER_ADMIN_PASSWORD || '';
   if (!email || password.length < 8) return;
-  if (db.prepare('SELECT 1 FROM users WHERE email = ?').get(email)) return;
+  if (await emailTaken(email)) return;
   const tenantId = 'tenant-platform';
-  if (!getTenant(tenantId)) {
-    db.prepare('INSERT INTO tenants (id, data) VALUES (?, ?)').run(tenantId, JSON.stringify({
+  if (!(await getTenant(tenantId))) {
+    await run('INSERT INTO tenants (id, data) VALUES (?, ?)', [tenantId, JSON.stringify({
       id: tenantId, name: 'GSPME Plateforme', legalForm: 'SAS', countryCode: 'SN', taxNumber: '',
       tradeRegisterNumber: '', address: '', city: 'Dakar', phone: '', email, currency: 'XOF',
       capitalSocial: 0, subscriptionPlan: 'ENTERPRISE', subscriptionStatus: 'ACTIVE',
       maxUsers: 100, maxStorageMB: 102400, activeModules: ALL_MODULES, currentBranchId: 'branch-platform',
       branches: [{ id: 'branch-platform', tenantId, name: 'Siège', city: 'Dakar', address: '', phone: '', isHeadquarters: true }],
-    }));
+    })]);
   }
-  db.prepare('INSERT INTO users (id, tenant_id, name, email, password_hash, role) VALUES (?,?,?,?,?,?)')
-    .run(`user-${randomUUID()}`, tenantId, 'Super Admin GSPME', email, hashPassword(password), 'SUPER_ADMIN_SAAS');
+  await run('INSERT INTO users (id, tenant_id, name, email, password_hash, role) VALUES (?,?,?,?,?,?)',
+    [`user-${randomUUID()}`, tenantId, 'Super Admin GSPME', email, hashPassword(password), 'SUPER_ADMIN_SAAS']);
   console.log(`Super-admin créé : ${email}`);
 }
 
+/** Prêt quand les tables existent (les tests attendent cette promesse). */
+export const ready = initDb();
 export { app };
+
 if (process.env.GSPME_NO_LISTEN !== '1') {
-  seedSuperAdmin();
-  const port = Number(process.env.PORT) || 3001;
-  app.listen(port, () => console.log(`GSPME SaaS API sur http://localhost:${port}`));
+  ready
+    .then(seedSuperAdmin)
+    .then(() => {
+      const port = Number(process.env.PORT) || 3001;
+      app.listen(port, () => console.log(`GSPME SaaS API sur http://localhost:${port}`));
+    })
+    .catch(err => {
+      console.error('Démarrage impossible (base de données ?) :', err.message);
+      process.exit(1);
+    });
 }

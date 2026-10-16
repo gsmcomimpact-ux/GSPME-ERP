@@ -12,25 +12,24 @@
     "server": "tsx watch server/index.ts",
     "start": "tsx server/index.ts",
     "test:api": "tsx --test server/api.test.ts",
-    "build:server": "esbuild server/index.ts --bundle --platform=node --target=node18 --format=cjs --external:better-sqlite3 --outfile=deploy/server.js",
+    "build:server": "esbuild server/index.ts --bundle --platform=node --target=node18 --format=cjs --external:mysql2 --outfile=deploy/server.js",
     "build:deploy": "vite build && rm -rf deploy && mkdir -p deploy && npm run build:server && cp -r dist deploy/dist && node scripts/deploy-package.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
     "@tailwindcss/vite": "^4.3.3",
     "@vitejs/plugin-react": "^6.1.1",
-    "better-sqlite3": "^13.0.3",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
     "jspdf": "^4.2.1",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
+    "mysql2": "^3.24.6",
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
     "vite": "^8.3.0"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^9.6.0",
     "@types/express": "^4.17.21",
     "@types/node": "^22.14.0",
     "@types/react": "^19.3.0",

@@ -1,14 +1,25 @@
-process.env.DATABASE_PATH = ':memory:';
+// Nécessite une base MySQL/MariaDB de test (DB_HOST, DB_USER, DB_PASSWORD, DB_NAME ou DATABASE_URL).
+// ATTENTION : les tables sont vidées au démarrage des tests.
 process.env.GSPME_NO_LISTEN = '1';
+process.env.DB_NAME ||= 'gspme_test';
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import type { AddressInfo } from 'node:net';
 
-const { app } = await import('./index.ts');
+const { app, ready } = await import('./index.ts');
+const { run } = await import('./db.ts');
+await ready;
+await run('SET FOREIGN_KEY_CHECKS = 0');
+for (const t of ['records', 'users', 'tenants']) await run(`TRUNCATE TABLE ${t}`);
+await run('SET FOREIGN_KEY_CHECKS = 1');
 const server = app.listen(0);
 const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api`;
-test.after(() => server.close());
+test.after(async () => {
+  server.close();
+  const { pool } = await import('./db.ts');
+  await pool.end();
+});
 
 const call = async (method: string, url: string, body?: unknown, token?: string) => {
   const res = await fetch(base + url, {
