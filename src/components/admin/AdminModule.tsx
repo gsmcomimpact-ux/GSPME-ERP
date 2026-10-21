@@ -16,7 +16,10 @@ import {
   Plus,
   CheckCircle2,
   Globe2,
-  Lock
+  Lock,
+  Upload,
+  Image as ImageIcon,
+  Trash2,
 } from 'lucide-react';
 import { Tenant, User, AuditLog, Role, SubscriptionPlanId } from '../../types';
 import { COUNTRY_PACKS, formatMoney } from '../../services/currency';
@@ -59,6 +62,26 @@ export function AdminModule({
   const [phone, setPhone] = useState(tenant.phone);
   const [email, setEmail] = useState(tenant.email);
   const [capitalSocial, setCapitalSocial] = useState(tenant.capitalSocial);
+  const [logoUrl, setLogoUrl] = useState(tenant.logoUrl || '');
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 3 * 1024 * 1024) {
+      showToast("Veuillez sélectionner un fichier d'image inférieur à 3 Mo.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      if (result) {
+        setLogoUrl(result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Invite User State
   const [inviteName, setInviteName] = useState('');
@@ -84,8 +107,9 @@ export function AdminModule({
       phone,
       email,
       capitalSocial,
+      logoUrl,
     });
-    showToast('Informations de la société mises à jour avec succès.');
+    showToast('Informations de la société et logo mis à jour avec succès.');
   };
 
   const handleInviteUser = (e: React.FormEvent) => {
@@ -282,6 +306,64 @@ export function AdminModule({
                     onChange={e => setEmail(e.target.value)}
                     className="w-full p-2 border border-slate-300 rounded-lg"
                   />
+                </div>
+              </div>
+
+              {/* Logo de l'Entreprise */}
+              <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="block font-bold text-slate-800 text-xs">
+                      Logo Officiel de l'Entreprise
+                    </label>
+                    <p className="text-[11px] text-slate-500">
+                      Ce logo sera imprimé sur vos factures, devis, reçus de point de vente et bulletins de paie.
+                    </p>
+                  </div>
+                  {logoUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setLogoUrl('')}
+                      className="text-red-600 hover:text-red-700 text-[11px] font-semibold flex items-center gap-1 cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Retirer le logo</span>
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <div className="w-20 h-20 rounded-xl bg-white border border-slate-200 flex items-center justify-center overflow-hidden shrink-0 shadow-2xs">
+                    {logoUrl ? (
+                      <img
+                        src={logoUrl}
+                        alt="Logo de l'entreprise"
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-contain p-1"
+                      />
+                    ) : (
+                      <div className="text-center p-2 text-slate-400">
+                        <ImageIcon className="w-6 h-6 mx-auto mb-1 stroke-1 text-slate-300" />
+                        <span className="text-[9px] block">Aucun logo</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="inline-flex items-center gap-2 px-3.5 py-2 bg-white hover:bg-slate-100 border border-slate-300 text-slate-800 rounded-lg font-semibold text-xs cursor-pointer shadow-2xs transition-colors">
+                      <Upload className="w-4 h-4 text-[#0F5132]" />
+                      <span>{logoUrl ? "Changer le logo" : "Téléverser une image de logo"}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleLogoUpload}
+                        className="hidden"
+                      />
+                    </label>
+                    <p className="text-[10px] text-slate-400">
+                      Formats supportés : PNG, JPG, SVG, WebP (max 3 Mo).
+                    </p>
+                  </div>
                 </div>
               </div>
 

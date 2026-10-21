@@ -247,7 +247,7 @@ export function LandingPage({ onSelectPlanToSubscribe, onEnterDemoApp }: Landing
               onClick={() => scrollToSection('tarifs')}
               className="w-full text-left py-2 px-3 rounded-lg text-xs font-bold text-[#0F5132] bg-emerald-50/60"
             >
-              Tarifs (Gratuit, 15k, 25k, 50k FCFA)
+              Tarifs (Gratuit, 5k, 7.5k, 10k FR CFA)
             </button>
             <button
               onClick={() => scrollToSection('comparatif')}
@@ -282,7 +282,7 @@ export function LandingPage({ onSelectPlanToSubscribe, onEnterDemoApp }: Landing
                 onClick={() => scrollToSection('tarifs')}
                 className="w-full py-2.5 bg-[#0F5132] text-white rounded-lg text-xs font-bold flex items-center justify-center gap-2"
               >
-                <span>Choisir une formule (Gratuit à 50.000 FR CFA)</span>
+                <span>Choisir une formule (Gratuit à 10.000 FR CFA)</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -364,7 +364,7 @@ export function LandingPage({ onSelectPlanToSubscribe, onEnterDemoApp }: Landing
                 className="bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-2xs hover:border-[#D4AF37] transition-colors text-left cursor-pointer group"
               >
                 <div className="text-lg font-black text-[#D4AF37] group-hover:underline">Dès 0 FR CFA</div>
-                <div className="text-[11px] text-slate-500">Formule Gratuite & offres dès 15.000 FR CFA</div>
+                <div className="text-[11px] text-slate-500">Formule Gratuite & offres dès 5.000 FR CFA</div>
               </button>
             </div>
           </div>
@@ -745,9 +745,9 @@ export function LandingPage({ onSelectPlanToSubscribe, onEnterDemoApp }: Landing
                 <tr>
                   <th className="py-4 px-5 font-bold text-sm">Fonctionnalité / Module</th>
                   <th className="py-4 px-4 font-bold text-center">Gratuit<br/><span className="text-[10px] text-emerald-600 font-bold">0 FR CFA</span></th>
-                  <th className="py-4 px-4 font-bold text-center">Essentiel<br/><span className="text-[10px] text-slate-600 font-bold">15.000 FR CFA / mois</span></th>
-                  <th className="py-4 px-4 font-bold text-center bg-emerald-50/50 text-[#0F5132]">Business<br/><span className="text-[10px] font-bold">25.000 FR CFA / mois</span></th>
-                  <th className="py-4 px-4 font-bold text-center">Premium<br/><span className="text-[10px] text-slate-600 font-bold">50.000 FR CFA / mois</span></th>
+                  <th className="py-4 px-4 font-bold text-center">Essentiel<br/><span className="text-[10px] text-slate-600 font-bold">5.000 FR CFA / mois</span></th>
+                  <th className="py-4 px-4 font-bold text-center bg-emerald-50/50 text-[#0F5132]">Business<br/><span className="text-[10px] font-bold">7.500 FR CFA / mois</span></th>
+                  <th className="py-4 px-4 font-bold text-center">Premium<br/><span className="text-[10px] text-slate-600 font-bold">10.000 FR CFA / mois</span></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-600">
@@ -1228,7 +1228,7 @@ export function LandingPage({ onSelectPlanToSubscribe, onEnterDemoApp }: Landing
               </div>
               <div>
                 <button onClick={() => scrollToSection('tarifs')} className="hover:text-white transition-colors cursor-pointer text-[11px]">
-                  Grille Tarifaire (Gratuit à 50.000 FR CFA)
+                  Grille Tarifaire (Gratuit à 10.000 FR CFA)
                 </button>
               </div>
               <div>
@@ -1248,17 +1248,17 @@ export function LandingPage({ onSelectPlanToSubscribe, onEnterDemoApp }: Landing
               </div>
               <div>
                 <button onClick={() => { onSelectPlanToSubscribe('ESSENTIEL', 'MENSUEL'); }} className="hover:text-[#D4AF37] transition-colors cursor-pointer text-[11px]">
-                  Formule Essentiel (15.000 FR CFA / mois)
+                  Formule Essentiel (5.000 FR CFA / mois)
                 </button>
               </div>
               <div>
                 <button onClick={() => { onSelectPlanToSubscribe('BUSINESS', 'MENSUEL'); }} className="hover:text-[#D4AF37] transition-colors cursor-pointer text-[11px]">
-                  Formule Business (25.000 FR CFA / mois)
+                  Formule Business (7.500 FR CFA / mois)
                 </button>
               </div>
               <div>
                 <button onClick={() => { onSelectPlanToSubscribe('PREMIUM', 'MENSUEL'); }} className="hover:text-[#D4AF37] transition-colors cursor-pointer text-[11px]">
-                  Formule Premium (50.000 FR CFA / mois)
+                  Formule Premium (10.000 FR CFA / mois)
                 </button>
               </div>
             </div>
@@ -1336,7 +1336,7 @@ export function LandingPage({ onSelectPlanToSubscribe, onEnterDemoApp }: Landing
               {legalModal === 'CGU' && (
                 <>
                   <p>
-                    <strong>1. Tarification & Devises :</strong> Les tarifs des forfaits GSPME (Gratuit 0 FR CFA, Essentiel 15.000 FR CFA / mois, Business 25.000 FR CFA / mois, Premium 50.000 FR CFA / mois) sont exprimés en Francs CFA (FR CFA) hors taxes. La formule Gratuite est sans frais et sans carte requise. La TVA applicable pour les offres payantes est calculée selon le pays d'immatriculation du client.
+                    <strong>1. Tarification & Devises :</strong> Les tarifs des forfaits GSPME (Gratuit 0 FR CFA, Essentiel 5.000 FR CFA / mois, Business 7.500 FR CFA / mois, Premium 10.000 FR CFA / mois) sont exprimés en Francs CFA (FR CFA) hors taxes. La formule Gratuite est sans frais et sans carte requise. La TVA applicable pour les offres payantes est calculée selon le pays d'immatriculation du client.
                   </p>
                   <p>
                     <strong>2. Engagement & Résiliation :</strong> Les abonnements mensuels sont sans engagement de durée et résiliables à tout moment depuis la console administrative. Les abonnements annuels font l'objet d'un paiement en une fois bénéficiant de 2 mois offerts.

@@ -887,15 +887,27 @@ export function SalesModule({
             <div className="bg-white p-8 border border-slate-200 rounded-lg text-slate-800 text-xs shadow-xs print-shadow-none">
               {/* Header Top */}
               <div className="flex justify-between items-start pb-6 border-b-2 border-[#0F5132]">
-                <div>
-                  <h1 className="text-xl font-black text-[#0F5132] tracking-tight">{tenant.name}</h1>
-                  <p className="text-xs text-slate-500 font-semibold">{tenant.legalForm} au capital de {formatMoney(tenant.capitalSocial, tenant.currency)}</p>
-                  <div className="mt-2 text-slate-600 space-y-0.5">
-                    <p>{tenant.address}, {tenant.city}</p>
-                    <p>Tél : {tenant.phone} · Email : {tenant.email}</p>
-                    <p className="font-semibold text-slate-900 mt-1">
-                      {tenant.taxNumber} · {tenant.tradeRegisterNumber}
-                    </p>
+                <div className="flex items-start gap-4">
+                  {tenant.logoUrl && (
+                    <div className="w-16 h-16 rounded-xl border border-slate-200 p-1 bg-white shrink-0 overflow-hidden shadow-2xs">
+                      <img
+                        src={tenant.logoUrl}
+                        alt={tenant.name}
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <h1 className="text-xl font-black text-[#0F5132] tracking-tight">{tenant.name}</h1>
+                    <p className="text-xs text-slate-500 font-semibold">{tenant.legalForm} au capital de {formatMoney(tenant.capitalSocial, tenant.currency)}</p>
+                    <div className="mt-2 text-slate-600 space-y-0.5">
+                      <p>{tenant.address}, {tenant.city}</p>
+                      <p>Tél : {tenant.phone} · Email : {tenant.email}</p>
+                      <p className="font-semibold text-slate-900 mt-1">
+                        {tenant.taxNumber} · {tenant.tradeRegisterNumber}
+                      </p>
+                    </div>
                   </div>
                 </div>
 

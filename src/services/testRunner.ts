@@ -302,9 +302,9 @@ export class TestRunnerService {
 
     const pricesValid =
       starter?.monthlyPriceFCFA === 0 &&
-      essentiel?.monthlyPriceFCFA === 15000 &&
-      business?.monthlyPriceFCFA === 25000 &&
-      premium?.monthlyPriceFCFA === 50000;
+      essentiel?.monthlyPriceFCFA === 5000 &&
+      business?.monthlyPriceFCFA === 7500 &&
+      premium?.monthlyPriceFCFA === 10000;
 
     const quotasValid =
       (starter?.maxUsers ?? 0) <= (essentiel?.maxUsers ?? 0) &&
@@ -316,12 +316,12 @@ export class TestRunnerService {
     return {
       id: 'test-9',
       category: 'ABONNEMENTS_MONETISATION',
-      name: 'Conformité des 4 Offres SaaS (Gratuit, 15k, 25k, 50k FCFA)',
-      description: 'Vérifie que les 4 formules d’abonnement (Gratuit, Essentiel, Business, Premium) sont configurées aux tarifs officiels (0, 15 000, 25 000 et 50 000 FCFA) et avec échelonnement progressif des quotas.',
+      name: 'Conformité des 4 Offres SaaS (Gratuit, 5k, 7.5k, 10k FR CFA)',
+      description: 'Vérifie que les 4 formules d’abonnement (Gratuit, Essentiel, Business, Premium) sont configurées aux tarifs officiels (0, 5 000, 7 500 et 10 000 FR CFA) et avec échelonnement progressif des quotas.',
       passed,
       durationMs: Math.round((performance.now() - start) * 100) / 100,
       details: passed
-        ? '4 offres conformes : Gratuit (0 FR CFA), Essentiel (15.000 FR CFA), Business (25.000 FR CFA), Premium (50.000 FR CFA).'
+        ? '4 offres conformes : Gratuit (0 FR CFA), Essentiel (5.000 FR CFA), Business (7.500 FR CFA), Premium (10.000 FR CFA).'
         : 'Incohérence détectée dans la grille tarifaire ou les quotas.',
     };
   }

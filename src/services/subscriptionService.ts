@@ -19,7 +19,7 @@ import {
 import { COUNTRY_PACKS } from './currency';
 import { storage } from './storage';
 
-// 4 Offres officielles configurables GSPME : Gratuit, 15 000, 25 000 et 50 000 FCFA
+// 4 Offres officielles configurables GSPME : Gratuit (0 FR CFA), Essentiel (5.000 FR CFA), Business (7.500 FR CFA) et Premium (10.000 FR CFA)
 export const DEFAULT_PLANS: SubscriptionPlanConfig[] = [
   {
     id: 'STARTER',
@@ -46,8 +46,8 @@ export const DEFAULT_PLANS: SubscriptionPlanConfig[] = [
     id: 'ESSENTIEL',
     name: 'Essentiel',
     tagline: 'Pour commerçants, boutiques, prestataires et TPE en pleine croissance',
-    monthlyPriceFCFA: 15000,
-    annualPriceFCFA: 150000, // 2 mois offerts
+    monthlyPriceFCFA: 5000,
+    annualPriceFCFA: 50000, // 2 mois offerts
     maxUsers: 5,
     maxStorageMB: 10240, // 10 Go
     badge: 'Essentiel PME',
@@ -75,8 +75,8 @@ export const DEFAULT_PLANS: SubscriptionPlanConfig[] = [
     id: 'BUSINESS',
     name: 'Business',
     tagline: 'Pour PME structurées, distribution, transport, services et BTP',
-    monthlyPriceFCFA: 25000,
-    annualPriceFCFA: 250000, // 2 mois offerts
+    monthlyPriceFCFA: 7500,
+    annualPriceFCFA: 75000, // 2 mois offerts
     maxUsers: 15,
     maxStorageMB: 51200, // 50 Go
     popular: true,
@@ -110,8 +110,8 @@ export const DEFAULT_PLANS: SubscriptionPlanConfig[] = [
     id: 'PREMIUM',
     name: 'Premium',
     tagline: 'Pour entreprises multi-sites, industries, grands comptes et holdings',
-    monthlyPriceFCFA: 50000,
-    annualPriceFCFA: 500000, // 2 mois offerts
+    monthlyPriceFCFA: 10000,
+    annualPriceFCFA: 100000, // 2 mois offerts
     maxUsers: 50,
     maxStorageMB: 102400, // 100 Go
     badge: 'Entreprise & Illimité',
@@ -158,10 +158,10 @@ const INITIAL_SUBSCRIPTION_ORDERS: SubscriptionOrder[] = [
     countryCode: 'SN',
     planId: 'PREMIUM',
     billingCycle: 'ANNUEL',
-    amountHT: 500000,
+    amountHT: 100000,
     vatRate: 18,
-    vatAmount: 90000,
-    amountTTC: 590000,
+    vatAmount: 18000,
+    amountTTC: 118000,
     currency: 'XOF',
     paymentMethod: 'CARTE_BANCAIRE',
     transactionReference: 'TXN-GIM-20260115-8842',
@@ -180,10 +180,10 @@ const INITIAL_SUBSCRIPTION_ORDERS: SubscriptionOrder[] = [
     countryCode: 'CI',
     planId: 'BUSINESS',
     billingCycle: 'MENSUEL',
-    amountHT: 25000,
+    amountHT: 7500,
     vatRate: 18,
-    vatAmount: 4500,
-    amountTTC: 29500,
+    vatAmount: 1350,
+    amountTTC: 8850,
     currency: 'XOF',
     paymentMethod: 'ORANGE_MONEY',
     paymentPhoneNumber: '+225 07 08 09 10 11',
@@ -203,10 +203,10 @@ const INITIAL_SUBSCRIPTION_ORDERS: SubscriptionOrder[] = [
     countryCode: 'CM',
     planId: 'ESSENTIEL',
     billingCycle: 'MENSUEL',
-    amountHT: 15000,
+    amountHT: 5000,
     vatRate: 19.25,
-    vatAmount: 2888,
-    amountTTC: 17888,
+    vatAmount: 963,
+    amountTTC: 5963,
     currency: 'XAF',
     paymentMethod: 'MTN_MOMO',
     paymentPhoneNumber: '+237 699 01 23 45',
@@ -246,8 +246,8 @@ const INITIAL_SUPPORT_INQUIRIES: SupportInquiry[] = [
 ];
 
 class SubscriptionService {
-  private plansKey = 'gspme_saas_plans_config_v5';
-  private ordersKey = 'gspme_subscription_orders_v2';
+  private plansKey = 'gspme_saas_plans_config_v7';
+  private ordersKey = 'gspme_subscription_orders_v3';
   private inquiriesKey = 'gspme_support_inquiries';
 
   constructor() {
@@ -259,13 +259,9 @@ class SubscriptionService {
       const stored = localStorage.getItem(this.plansKey);
       if (
         !stored ||
-        stored.includes('"maxStorageMB":1024') ||
-        stored.includes('"maxStorageMB": 1024') ||
-        stored.includes('"maxStorageMB":20480') ||
-        stored.includes('"maxStorageMB": 20480') ||
-        stored.includes('"monthlyPriceFCFA":5000') ||
-        !stored.includes('"maxStorageMB":51200') ||
-        !stored.includes('"maxStorageMB": 51200')
+        !stored.includes('"monthlyPriceFCFA":5000') ||
+        !stored.includes('"monthlyPriceFCFA":7500') ||
+        !stored.includes('"monthlyPriceFCFA":10000')
       ) {
         localStorage.setItem(this.plansKey, JSON.stringify(DEFAULT_PLANS));
       }
