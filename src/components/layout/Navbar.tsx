@@ -81,8 +81,17 @@ export function Navbar({
             }}
             className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg border border-slate-200 hover:border-[#0F5132]/40 bg-slate-50/60 hover:bg-white text-left transition-all cursor-pointer"
           >
-            <div className="w-6 h-6 rounded-md bg-[#0F5132] text-white flex items-center justify-center font-bold text-xs shadow-2xs">
-              {tenant.name.charAt(0)}
+            <div className="w-6 h-6 rounded-md bg-[#0F5132] text-white flex items-center justify-center font-bold text-xs shadow-2xs overflow-hidden">
+              {tenant.logoUrl ? (
+                <img
+                  src={tenant.logoUrl}
+                  alt={tenant.name}
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-contain bg-white"
+                />
+              ) : (
+                tenant.name.charAt(0)
+              )}
             </div>
             <div className="hidden sm:block">
               <div className="text-xs font-bold text-slate-900 leading-tight flex items-center gap-1.5">
@@ -117,8 +126,17 @@ export function Navbar({
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
-                    <div className="w-6 h-6 rounded bg-slate-100 text-slate-700 flex items-center justify-center text-xs font-bold">
-                      {t.name.charAt(0)}
+                    <div className="w-6 h-6 rounded bg-slate-100 text-slate-700 flex items-center justify-center text-xs font-bold overflow-hidden shrink-0">
+                      {t.logoUrl ? (
+                        <img
+                          src={t.logoUrl}
+                          alt={t.name}
+                          referrerPolicy="no-referrer"
+                          className="w-full h-full object-contain bg-white"
+                        />
+                      ) : (
+                        t.name.charAt(0)
+                      )}
                     </div>
                     <div>
                       <div className="truncate max-w-[170px]">{t.name}</div>
