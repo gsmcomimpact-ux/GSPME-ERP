@@ -29,6 +29,7 @@ export interface RegisterInput {
   legalForm?: string;
   city?: string;
   phone?: string;
+  requestedPlan?: string;
 }
 
 function readToken(): string | null {

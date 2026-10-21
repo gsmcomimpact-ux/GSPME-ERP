@@ -389,7 +389,7 @@ class SubscriptionService {
       name: params.companyName,
       tradeName: params.companyName,
       legalForm: params.legalForm,
-      logoUrl: params.logoUrl || '/src/assets/images/gspme_logo.jpg',
+      logoUrl: params.logoUrl || '/gspme_logo.jpg',
       countryCode: params.countryCode,
       taxNumber: params.taxNumber || `${countryPack.taxNumberLabel} En cours`,
       tradeRegisterNumber: params.tradeRegisterNumber || 'RCCM En cours',

@@ -40,7 +40,7 @@ const COLLECTIONS = new Set([
 /** Champs d'abonnement : modifiables uniquement par l'administrateur de la plateforme. */
 const BILLING_FIELDS = [
   'subscriptionPlan', 'subscriptionStatus', 'billingCycle', 'subscriptionExpiresAt',
-  'monthlySubscriptionAmount', 'maxUsers', 'maxStorageMB', 'activeModules',
+  'monthlySubscriptionAmount', 'maxUsers', 'maxStorageMB', 'activeModules', 'requestedPlan',
 ];
 
 type Row = Record<string, unknown>;
@@ -80,6 +80,14 @@ const getTenant = async (id: string): Promise<Row | null> => {
 const getUser = (id: string) => one<UserRow>('SELECT * FROM users WHERE id = ?', [id]);
 const emailTaken = async (email: string) => !!(await one('SELECT 1 AS x FROM users WHERE email = ?', [email]));
 
+/** Un tenant dont l'abonnement est résilié/suspendu n'accède plus à l'application (sauf super-admin). */
+const isSuspended = async (u: UserRow): Promise<boolean> => {
+  if (u.role === 'SUPER_ADMIN_SAAS') return false;
+  const t = await getTenant(u.tenant_id);
+  return !!t && t.subscriptionStatus === 'CANCELLED';
+};
+const SUSPENDED_MSG = 'Abonnement suspendu : contactez le support GSPME.';
+
 // ---------------------------------------------------------------- Santé
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', service: 'gspme-saas', time: new Date().toISOString() });
@@ -116,6 +124,7 @@ app.post('/api/auth/register', authLimiter, asyncH(async (req, res) => {
     subscriptionPlan: 'STARTER', subscriptionStatus: 'TRIAL', billingCycle: 'MENSUEL',
     subscriptionExpiresAt: trialEnd, monthlySubscriptionAmount: 0, maxUsers: 5, maxStorageMB: 2048,
     activeModules: ALL_MODULES,
+    requestedPlan: ['ESSENTIEL', 'BUSINESS', 'PREMIUM'].includes(b.requestedPlan) ? b.requestedPlan : undefined,
     currentBranchId: branchId,
     branches: [{ id: branchId, tenantId, name: `Siège ${city}`, city, address: str(b.address, 500), phone: str(b.phone, 50), isHeadquarters: true }],
   };
@@ -146,6 +155,7 @@ app.post('/api/auth/login', authLimiter, asyncH(async (req, res) => {
   const user = await one<UserRow>('SELECT * FROM users WHERE email = ?', [email]);
   const ok = verifyPassword(password, user?.password_hash || DUMMY_HASH);
   if (!user || !ok || !user.active) { res.status(401).json({ error: 'Identifiants invalides' }); return; }
+  if (await isSuspended(user)) { res.status(403).json({ error: SUSPENDED_MSG }); return; }
   await run('UPDATE users SET last_login = ? WHERE id = ?', [now(), user.id]);
   res.json({ token: signToken({ id: user.id, tenantId: user.tenant_id, role: user.role }) });
 }));
@@ -154,6 +164,7 @@ app.get('/api/auth/me', requireAuth, asyncH(async (req, res) => {
   const { auth } = req as AuthedRequest;
   const user = await getUser(auth.sub);
   if (!user || !user.active) { res.status(401).json({ error: 'Compte désactivé' }); return; }
+  if (await isSuspended(user)) { res.status(403).json({ error: SUSPENDED_MSG }); return; }
   res.json({ user: toUser(user), tenant: await getTenant(user.tenant_id) });
 }));
 
@@ -163,6 +174,7 @@ app.get('/api/sync', requireAuth, asyncH(async (req, res) => {
   const { auth } = req as AuthedRequest;
   const me = await getUser(auth.sub);
   if (!me || !me.active) { res.status(401).json({ error: 'Compte désactivé' }); return; }
+  if (await isSuspended(me)) { res.status(403).json({ error: SUSPENDED_MSG }); return; }
 
   const sa = me.role === 'SUPER_ADMIN_SAAS';
   const tenantRows = sa
@@ -197,6 +209,7 @@ app.put('/api/collections/:name', requireAuth, asyncH(async (req, res) => {
 
   const user = await getUser(auth.sub);
   if (!user || !user.active) { res.status(401).json({ error: 'Compte désactivé' }); return; }
+  if (await isSuspended(user)) { res.status(403).json({ error: SUSPENDED_MSG }); return; }
   if (user.role === 'AUDITEUR_EXTERNE') { res.status(403).json({ error: 'Accès en lecture seule' }); return; }
   const sa = user.role === 'SUPER_ADMIN_SAAS';
   const tid = user.tenant_id;

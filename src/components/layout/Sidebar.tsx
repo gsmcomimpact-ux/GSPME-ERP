@@ -28,7 +28,7 @@ import {
   Globe2,
   ContactRound,
 } from 'lucide-react';
-import { Tenant } from '../../types';
+import { Role, Tenant } from '../../types';
 
 export type NavModule =
   | 'dashboard'
@@ -58,6 +58,8 @@ interface SidebarProps {
   collapsed: boolean;
   onToggleCollapse: () => void;
   onOpenPublicSite?: () => void;
+  /** Rôle de l'utilisateur connecté : l'entrée « Super Admin SaaS » est réservée à SUPER_ADMIN_SAAS. */
+  userRole?: Role;
 }
 
 export function Sidebar({
@@ -67,6 +69,7 @@ export function Sidebar({
   collapsed,
   onToggleCollapse,
   onOpenPublicSite,
+  userRole,
 }: SidebarProps) {
   const navSections = [
     {
@@ -115,6 +118,13 @@ export function Sidebar({
     },
   ];
 
+  const visibleSections = navSections
+    .map(section => ({
+      ...section,
+      items: section.items.filter(item => item.id !== 'saas' || userRole === 'SUPER_ADMIN_SAAS'),
+    }))
+    .filter(section => section.items.length > 0);
+
   return (
     <aside
       className={`bg-[#0F5132] text-white flex flex-col justify-between transition-all duration-200 border-r border-[#0F5132]/20 select-none z-40 shrink-0 ${
@@ -129,7 +139,7 @@ export function Sidebar({
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl overflow-hidden bg-white p-0.5 border border-white/20 shadow-xs shrink-0">
                   <img
-                    src="/src/assets/images/gspme_logo.jpg"
+                    src="/gspme_logo.jpg"
                     alt="GSPME-ERP"
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-contain rounded-lg"
@@ -158,7 +168,7 @@ export function Sidebar({
               title="Agrandir la barre latérale"
             >
               <img
-                src="/src/assets/images/gspme_logo.jpg"
+                src="/gspme_logo.jpg"
                 alt="GSPME-ERP"
                 referrerPolicy="no-referrer"
                 className="w-full h-full object-contain rounded-lg"
@@ -169,7 +179,7 @@ export function Sidebar({
 
         {/* Navigation Items Scroll Area */}
         <div className="p-3 space-y-4 overflow-y-auto max-h-[calc(100vh-140px)]">
-          {navSections.map((section, idx) => (
+          {visibleSections.map((section, idx) => (
             <div key={idx} className="space-y-1">
               {!collapsed && (
                 <div className="px-3 text-[10px] font-bold text-white/40 uppercase tracking-wider">

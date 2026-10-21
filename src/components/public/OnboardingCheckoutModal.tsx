@@ -183,7 +183,7 @@ export function OnboardingCheckoutModal({
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl overflow-hidden bg-white p-0.5 border border-white/20 shadow-xs shrink-0">
               <img
-                src="/src/assets/images/gspme_logo.jpg"
+                src="/gspme_logo.jpg"
                 alt="GSPME-ERP"
                 referrerPolicy="no-referrer"
                 className="w-full h-full object-contain rounded-lg"
@@ -510,7 +510,7 @@ export function OnboardingCheckoutModal({
                       <span>Exemples rapides :</span>
                       <button
                         type="button"
-                        onClick={() => setLogoUrl('/src/assets/images/gspme_logo.jpg')}
+                        onClick={() => setLogoUrl('/gspme_logo.jpg')}
                         className="text-[#0F5132] hover:underline font-bold cursor-pointer"
                       >
                         Logo GSPME

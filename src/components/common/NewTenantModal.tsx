@@ -70,7 +70,7 @@ export function NewTenantModal({ isOpen, onClose, onTenantCreated }: NewTenantMo
       id: newId,
       name,
       legalForm,
-      logoUrl: logoUrl || '/src/assets/images/gspme_logo.jpg',
+      logoUrl: logoUrl || '/gspme_logo.jpg',
       countryCode,
       taxNumber: taxNumber || `${pack.taxNumberLabel} 000${Math.floor(100000 + Math.random() * 900000)}`,
       tradeRegisterNumber: tradeRegisterNumber || `${pack.tradeRegisterLabel} 2026-B-${Math.floor(1000 + Math.random() * 9000)}`,

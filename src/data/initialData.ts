@@ -38,7 +38,7 @@ export const INITIAL_TENANTS: Tenant[] = [
     name: 'Sénégal BTP & Logistique SARL',
     tradeName: 'SBL Afrique',
     legalForm: 'SARL',
-    logoUrl: '/src/assets/images/gspme_logo.jpg',
+    logoUrl: '/gspme_logo.jpg',
     countryCode: 'SN',
     taxNumber: 'NINEA 008472912 2S2',
     tradeRegisterNumber: 'RCCM SN-DKR-2021-B-14205',

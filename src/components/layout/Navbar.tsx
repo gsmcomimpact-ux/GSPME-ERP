@@ -15,7 +15,8 @@ import {
   Plus, 
   Globe2,
   Check,
-  PlusCircle
+  PlusCircle,
+  LogOut
 } from 'lucide-react';
 import { Tenant, User, Role } from '../../types';
 import { COUNTRY_PACKS } from '../../services/currency';
@@ -33,6 +34,9 @@ interface NavbarProps {
   onOpenNewTenantModal: () => void;
   onOpenPublicSite?: () => void;
   onNavigate?: (module: any) => void;
+  /** Session serveur ouverte : rôle imposé par le serveur, pas de simulateur. */
+  serverMode?: boolean;
+  onLogout?: () => void;
 }
 
 export function Navbar({
@@ -48,6 +52,8 @@ export function Navbar({
   onOpenNewTenantModal,
   onOpenPublicSite,
   onNavigate,
+  serverMode = false,
+  onLogout,
 }: NavbarProps) {
   const [tenantDropdownOpen, setTenantDropdownOpen] = useState(false);
   const [branchDropdownOpen, setBranchDropdownOpen] = useState(false);
@@ -65,6 +71,7 @@ export function Navbar({
     { role: 'LOGISTIQUE_STOCKS', label: 'Responsable Stocks', desc: 'Entrepôts, Réceptions, Sorties' },
     { role: 'GESTIONNAIRE_RH', label: 'Gestionnaire RH & Paie', desc: 'Personnel, Salaires, Déclarations' },
     { role: 'AUDITEUR_EXTERNE', label: 'Commissaire aux Comptes', desc: 'Consultation & Pistes d’audit' },
+    { role: 'SUPER_ADMIN_SAAS', label: 'Super Admin Plateforme', desc: 'Gestion des entreprises & abonnements' },
   ];
 
   return (
@@ -75,6 +82,7 @@ export function Navbar({
         <div className="relative">
           <button
             onClick={() => {
+              if (serverMode) return;
               setTenantDropdownOpen(!tenantDropdownOpen);
               setBranchDropdownOpen(false);
               setRoleDropdownOpen(false);
@@ -106,10 +114,10 @@ export function Navbar({
                 <span>{tenant.currency}</span>
               </div>
             </div>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-400 ml-1" />
+            {!serverMode && <ChevronDown className="w-3.5 h-3.5 text-slate-400 ml-1" />}
           </button>
 
-          {tenantDropdownOpen && (
+          {tenantDropdownOpen && !serverMode && (
             <div className="absolute top-full left-0 mt-1.5 w-72 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-50">
               <div className="px-3 py-1 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
                 Mes Entreprises & Filiales
@@ -240,7 +248,7 @@ export function Navbar({
           >
             <div className="w-4 h-4 rounded overflow-hidden shrink-0 bg-white">
               <img
-                src="/src/assets/images/gspme_logo.jpg"
+                src="/gspme_logo.jpg"
                 alt="GSPME-ERP"
                 referrerPolicy="no-referrer"
                 className="w-full h-full object-contain"
@@ -377,12 +385,24 @@ export function Navbar({
           {roleDropdownOpen && (
             <div className="absolute top-full right-0 mt-1.5 w-64 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-50">
               <div className="px-3 py-1.5 border-b border-slate-100">
-                <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                  Tester les Profils & Rôles RBAC
-                </div>
-                <div className="text-[10px] text-slate-500">Basculez de rôle pour tester les autorisations</div>
+                {serverMode ? (
+                  <>
+                    <div className="text-xs font-bold text-slate-900">{currentUser.name}</div>
+                    <div className="text-[10px] text-slate-500">{currentUser.email}</div>
+                    <div className="text-[10px] text-[#0F5132] font-semibold mt-0.5">
+                      {currentUser.role.replace(/_/g, ' ')} · {tenant.name}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                      Tester les Profils & Rôles RBAC
+                    </div>
+                    <div className="text-[10px] text-slate-500">Basculez de rôle pour tester les autorisations</div>
+                  </>
+                )}
               </div>
-              {rolesList.map(item => (
+              {!serverMode && rolesList.map(item => (
                 <button
                   key={item.role}
                   onClick={() => {
@@ -400,6 +420,21 @@ export function Navbar({
                   {currentUser.role === item.role && <Check className="w-3.5 h-3.5 text-[#0F5132]" />}
                 </button>
               ))}
+              {onLogout && (
+                <>
+                  <div className="border-t border-slate-100 my-1" />
+                  <button
+                    onClick={() => {
+                      setRoleDropdownOpen(false);
+                      onLogout();
+                    }}
+                    className="w-full px-3 py-2 text-left text-xs text-red-600 font-semibold hover:bg-red-50 flex items-center gap-2 cursor-pointer"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span>{serverMode ? 'Se déconnecter' : 'Quitter la démo'}</span>
+                  </button>
+                </>
+              )}
             </div>
           )}
         </div>

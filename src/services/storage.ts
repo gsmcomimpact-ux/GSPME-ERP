@@ -606,6 +606,12 @@ export class SaaSStorageService {
     Object.values(STORAGE_KEYS).forEach(k => localStorage.removeItem(k));
   }
 
+  /** Déconnexion : vide le cache local (données de l'entreprise) et réactive l'état de démonstration. */
+  public logoutReset(): void {
+    this.clearLocal();
+    this.notify();
+  }
+
   public async refreshFromServer(): Promise<void> {
     this.hydrateFromServer(await api.fetchSnapshot());
   }

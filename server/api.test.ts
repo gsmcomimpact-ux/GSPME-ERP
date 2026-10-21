@@ -90,3 +90,29 @@ test('création d’utilisateur et rôle lecture seule', async () => {
   assert.equal((await call('PUT', '/collections/products', { rows: [] }, tok)).status, 403);
   assert.equal((await call('POST', '/users', { name: 'Y', email: 'y@team.sn', password: 'motdepasse1' }, tok)).status, 403);
 });
+
+test('super-admin : accès réservé et suspension d’un tenant', async () => {
+  const { run: sql } = await import('./db.ts');
+  const { hashPassword } = await import('./auth.ts');
+  await sql(
+    "INSERT IGNORE INTO tenants (id, data) VALUES ('tenant-platform', '{\"id\":\"tenant-platform\",\"name\":\"GSPME\",\"subscriptionStatus\":\"ACTIVE\"}')"
+  );
+  await sql(
+    "INSERT INTO users (id, tenant_id, name, email, password_hash, role) VALUES ('user-sa', 'tenant-platform', 'SA', 'sa@gspme.sn', ?, 'SUPER_ADMIN_SAAS')",
+    [hashPassword('motdepasse1')]
+  );
+  const sa = (await call('POST', '/auth/login', { email: 'sa@gspme.sn', password: 'motdepasse1' })).body.token;
+  const victim = (await register('susp')).body.token;
+  const tid = (await call('GET', '/auth/me', undefined, victim)).body.tenant.id;
+
+  // un dirigeant ne voit que son tenant ; le super-admin voit tout
+  assert.equal((await call('GET', '/sync', undefined, victim)).body.tenants.length, 1);
+  assert.ok((await call('GET', '/sync', undefined, sa)).body.tenants.length >= 2);
+
+  // le super-admin suspend le tenant : plus de connexion ni de synchronisation
+  const t = (await call('GET', '/auth/me', undefined, victim)).body.tenant;
+  await call('PUT', '/collections/tenants', { rows: [{ ...t, subscriptionStatus: 'CANCELLED' }] }, sa);
+  assert.equal((await call('POST', '/auth/login', { email: 'susp@test.sn', password: 'motdepasse1' })).status, 403);
+  assert.equal((await call('GET', '/sync', undefined, victim)).status, 403);
+  assert.equal(tid, t.id);
+});
