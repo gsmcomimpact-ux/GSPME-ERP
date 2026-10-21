@@ -82,6 +82,12 @@ const SCHEMA = [
      KEY idx_users_tenant (tenant_id),
      CONSTRAINT fk_users_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id)
    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci`,
+  `CREATE TABLE IF NOT EXISTS inquiries (
+     id VARCHAR(64) NOT NULL PRIMARY KEY,
+     data LONGTEXT NOT NULL,
+     status VARCHAR(20) NOT NULL DEFAULT 'NOUVEAU',
+     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
   `CREATE TABLE IF NOT EXISTS records (
      tenant_id VARCHAR(64) NOT NULL,
      collection VARCHAR(48) NOT NULL,

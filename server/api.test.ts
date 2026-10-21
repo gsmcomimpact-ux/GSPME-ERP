@@ -111,8 +111,50 @@ test('super-admin : accès réservé et suspension d’un tenant', async () => {
 
   // le super-admin suspend le tenant : plus de connexion ni de synchronisation
   const t = (await call('GET', '/auth/me', undefined, victim)).body.tenant;
+  // le super-admin ne peut pas modifier un autre tenant via la synchro générique...
   await call('PUT', '/collections/tenants', { rows: [{ ...t, subscriptionStatus: 'CANCELLED' }] }, sa);
+  assert.equal((await call('GET', '/auth/me', undefined, victim)).body.tenant.subscriptionStatus, 'TRIAL');
+  // ...mais passe par l'API d'administration (réservée au super-admin)
+  assert.equal((await call('PATCH', `/admin/tenants/${tid}`, { subscriptionStatus: 'CANCELLED' }, victim)).status, 403);
+  assert.equal((await call('PATCH', `/admin/tenants/${tid}`, { subscriptionStatus: 'INCONNU' }, sa)).status, 400);
+  assert.equal((await call('PATCH', `/admin/tenants/${tid}`, { subscriptionStatus: 'CANCELLED' }, sa)).status, 200);
   assert.equal((await call('POST', '/auth/login', { email: 'susp@test.sn', password: 'motdepasse1' })).status, 403);
   assert.equal((await call('GET', '/sync', undefined, victim)).status, 403);
   assert.equal(tid, t.id);
+});
+
+test('contact public et boîte de réception super-admin', async () => {
+  const bad = await call('POST', '/contact', { name: 'X', email: 'pas-un-email', message: 'Bonjour' });
+  assert.equal(bad.status, 400);
+  const ok = await call('POST', '/contact', { name: 'Fatou', email: 'fatou@prospect.sn', message: 'Je veux une démo', company: 'Prospect SARL', country: 'CI' });
+  assert.equal(ok.status, 201);
+
+  const sa = (await call('POST', '/auth/login', { email: 'sa@gspme.sn', password: 'motdepasse1' })).body.token;
+  const owner = (await register('inbox')).body.token;
+  assert.equal((await call('GET', '/admin/inquiries')).status, 403);
+  assert.equal((await call('GET', '/admin/inquiries', undefined, owner)).status, 403);
+
+  const list = (await call('GET', '/admin/inquiries', undefined, sa)).body.inquiries;
+  const mine = list.find((i: any) => i.email === 'fatou@prospect.sn');
+  assert.ok(mine);
+  assert.equal(mine.status, 'NOUVEAU');
+  assert.equal((await call('PATCH', `/admin/inquiries/${mine.id}`, { status: 'TRAITE' }, owner)).status, 403);
+  assert.equal((await call('PATCH', `/admin/inquiries/${mine.id}`, { status: 'N_IMPORTE_QUOI' }, sa)).status, 400);
+  assert.equal((await call('PATCH', `/admin/inquiries/${mine.id}`, { status: 'TRAITE' }, sa)).status, 200);
+  const after = (await call('GET', '/admin/inquiries', undefined, sa)).body.inquiries.find((i: any) => i.id === mine.id);
+  assert.equal(after.status, 'TRAITE');
+});
+
+test('super-admin : changement de formule et réactivation', async () => {
+  const sa = (await call('POST', '/auth/login', { email: 'sa@gspme.sn', password: 'motdepasse1' })).body.token;
+  const owner = (await register('plan')).body.token;
+  const tid = (await call('GET', '/auth/me', undefined, owner)).body.tenant.id;
+  const r = await call('PATCH', `/admin/tenants/${tid}`, { subscriptionPlan: 'BUSINESS', subscriptionStatus: 'ACTIVE', maxUsers: 15, monthlySubscriptionAmount: 7500 }, sa);
+  assert.equal(r.status, 200);
+  const me = (await call('GET', '/auth/me', undefined, owner)).body.tenant;
+  assert.equal(me.subscriptionPlan, 'BUSINESS');
+  assert.equal(me.maxUsers, 15);
+  assert.equal(me.city, 'Dakar');   // le reste de la fiche n'est pas écrasé
+  assert.equal((await call('PATCH', '/admin/tenants/tenant-inconnu', { maxUsers: 3 }, sa)).status, 404);
+  assert.equal((await call('PATCH', `/admin/tenants/${tid}`, { maxUsers: -4 }, sa)).status, 400);
 });

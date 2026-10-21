@@ -157,8 +157,11 @@ export default function App() {
       setServerAvailable(available);
       if (available && api.isEnabled()) {
         try {
-          storage.hydrateFromServer(await api.fetchSnapshot());
+          const snapshot = await api.fetchSnapshot();
+          storage.hydrateFromServer(snapshot);
+          const me = snapshot.users.find(u => u.id === snapshot.activeUserId);
           setServerMode(true);
+          if (me?.role === 'SUPER_ADMIN_SAAS') setActiveModule('saas');
           setViewMode('ERP');
         } catch (err) {
           const message = (err as Error).message;

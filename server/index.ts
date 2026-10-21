@@ -15,6 +15,7 @@ import {
   requireAuth,
   signToken,
   verifyPassword,
+  verifyToken,
 } from './auth.ts';
 
 const ROLES = [
@@ -27,7 +28,7 @@ const CURRENCY_BY_COUNTRY: Record<string, string> = {
   SN: 'XOF', CI: 'XOF', ML: 'XOF', BJ: 'XOF', NE: 'XOF', BF: 'XOF', TG: 'XOF', CM: 'XAF', GN: 'GNF',
 };
 const ALL_MODULES = [
-  'dashboard', 'crm', 'sales', 'purchases', 'inventory', 'pos', 'accounting', 'treasury',
+  'dashboard', 'crm', 'contacts', 'sales', 'purchases', 'inventory', 'pos', 'accounting', 'treasury',
   'tax', 'payroll', 'projects', 'assets', 'documents', 'bi', 'ai', 'admin',
 ];
 /** Collections métier synchronisées (noms = clés de stockage du front). */
@@ -218,11 +219,11 @@ app.put('/api/collections/:name', requireAuth, asyncH(async (req, res) => {
     // Chaque tenant ne modifie que son propre profil, hors champs d'abonnement.
     for (const raw of rows as Row[]) {
       if (!raw || typeof raw.id !== 'string') continue;
-      if (!sa && raw.id !== tid) continue;
+      if (raw.id !== tid) continue; // le super-admin gère les autres entreprises via PATCH /api/admin/tenants/:id
       const current = await getTenant(raw.id);
       if (!current) continue;
       const next: Row = { ...current, ...raw, id: raw.id };
-      if (!sa) for (const f of BILLING_FIELDS) next[f] = current[f];
+      for (const f of BILLING_FIELDS) next[f] = current[f]; // l'abonnement ne se modifie que par le super-admin
       await run('UPDATE tenants SET data = ? WHERE id = ?', [JSON.stringify(next), raw.id]);
     }
     res.json({ ok: true }); return;
@@ -300,6 +301,90 @@ app.post('/api/users', requireAuth, asyncH(async (req, res) => {
   await run('INSERT INTO users (id, tenant_id, name, email, password_hash, role) VALUES (?,?,?,?,?,?)',
     [id, auth.tid, name, email, hashPassword(password), role]);
   res.status(201).json({ user: toUser((await getUser(id))!) });
+}));
+
+// ---------------------------------------------------------------- Contact public & administration plateforme
+const contactLimiter = rateLimit(10, 15 * 60 * 1000);
+const INQUIRY_STATUSES = ['NOUVEAU', 'EN_COURS', 'TRAITE'];
+
+/** Formulaire de contact de la page d'accueil (public, limité par IP). */
+app.post('/api/contact', contactLimiter, asyncH(async (req, res) => {
+  const b = req.body || {};
+  const name = str(b.name);
+  const email = str(b.email).toLowerCase();
+  const message = str(b.message, 4000);
+  if (!name || !message || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    res.status(400).json({ error: 'Nom, email valide et message requis' }); return;
+  }
+  const id = `INQ-${randomUUID()}`;
+  const createdAt = new Date().toISOString();
+  const inquiry = {
+    id, name, email, phone: str(b.phone, 50), company: str(b.company), subject: str(b.subject) || 'Demande de contact',
+    country: COUNTRIES.includes(b.country) ? b.country : 'SN', message, createdAt, status: 'NOUVEAU',
+  };
+  await run('INSERT INTO inquiries (id, data, status) VALUES (?,?,?)', [id, JSON.stringify(inquiry), 'NOUVEAU']);
+  res.status(201).json({ ok: true });
+}));
+
+async function superGuard(req: Request, res: Response, next: NextFunction) {
+  try {
+    const header = req.headers.authorization || '';
+    const payload = header.startsWith('Bearer ') ? verifyToken(header.slice(7)) : null;
+    const user = payload ? await getUser(payload.sub) : undefined;
+    if (!user || !user.active || user.role !== 'SUPER_ADMIN_SAAS') {
+      res.status(403).json({ error: 'Réservé aux administrateurs de la plateforme' }); return;
+    }
+    next();
+  } catch (err) { next(err); }
+}
+
+app.patch('/api/admin/tenants/:id', superGuard, asyncH(async (req, res) => {
+  const id = req.params.id as string;
+  const current = await getTenant(id);
+  if (!current) { res.status(404).json({ error: 'Entreprise introuvable' }); return; }
+  const b = req.body || {};
+  const next: Row = { ...current };
+  const PLANS = ['STARTER', 'ESSENTIEL', 'BUSINESS', 'PREMIUM', 'ENTERPRISE'];
+  const STATUSES = ['ACTIVE', 'TRIAL', 'PAST_DUE', 'CANCELLED'];
+  if (b.subscriptionPlan !== undefined) {
+    if (!PLANS.includes(b.subscriptionPlan)) { res.status(400).json({ error: 'Formule invalide' }); return; }
+    next.subscriptionPlan = b.subscriptionPlan;
+  }
+  if (b.subscriptionStatus !== undefined) {
+    if (!STATUSES.includes(b.subscriptionStatus)) { res.status(400).json({ error: 'Statut invalide' }); return; }
+    if (id === 'tenant-platform' && b.subscriptionStatus === 'CANCELLED') {
+      res.status(400).json({ error: "L'espace plateforme ne peut pas être suspendu" }); return;
+    }
+    next.subscriptionStatus = b.subscriptionStatus;
+  }
+  for (const f of ['maxUsers', 'maxStorageMB', 'monthlySubscriptionAmount'] as const) {
+    if (b[f] !== undefined) {
+      const n = Number(b[f]);
+      if (!Number.isFinite(n) || n < 0) { res.status(400).json({ error: `Valeur invalide : ${f}` }); return; }
+      next[f] = Math.round(n);
+    }
+  }
+  if (b.billingCycle !== undefined) {
+    if (!['MENSUEL', 'ANNUEL'].includes(b.billingCycle)) { res.status(400).json({ error: 'Cycle invalide' }); return; }
+    next.billingCycle = b.billingCycle;
+  }
+  if (Array.isArray(b.activeModules)) next.activeModules = b.activeModules.filter((m: unknown) => ALL_MODULES.includes(m as string));
+  if (typeof b.subscriptionExpiresAt === 'string') next.subscriptionExpiresAt = b.subscriptionExpiresAt.slice(0, 40);
+  await run('UPDATE tenants SET data = ? WHERE id = ?', [JSON.stringify(next), id]);
+  res.json({ tenant: next });
+}));
+
+app.get('/api/admin/inquiries', superGuard, asyncH(async (_req, res) => {
+  const rows = await all<{ data: string; status: string }>('SELECT data, status FROM inquiries ORDER BY created_at DESC LIMIT 500');
+  res.json({ inquiries: rows.map(r => ({ ...JSON.parse(r.data), status: r.status })) });
+}));
+
+app.patch('/api/admin/inquiries/:id', superGuard, asyncH(async (req, res) => {
+  const status = req.body?.status;
+  if (!INQUIRY_STATUSES.includes(status)) { res.status(400).json({ error: 'Statut invalide' }); return; }
+  const r = await run('UPDATE inquiries SET status = ? WHERE id = ?', [status, req.params.id as string]);
+  if (!r.affectedRows) { res.status(404).json({ error: 'Demande introuvable' }); return; }
+  res.json({ ok: true });
 }));
 
 // ---------------------------------------------------------------- Front statique (production)

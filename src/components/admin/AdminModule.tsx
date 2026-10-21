@@ -584,13 +584,31 @@ export function AdminModule({
                         </div>
                       ) : (
                         <button
-                          onClick={() => {
+                          onClick={async () => {
+                            if (api.isEnabled()) {
+                              // Session serveur : seule l'équipe GSPME active une formule (après règlement)
+                              try {
+                                await api.submitContact({
+                                  name: currentUser.name,
+                                  email: currentUser.email,
+                                  phone: tenant.phone,
+                                  company: tenant.name,
+                                  country: tenant.countryCode,
+                                  subject: `Changement de formule : ${tenant.subscriptionPlan} → ${plan.id}`,
+                                  message: `L'entreprise ${tenant.name} (${tenant.id}) demande le passage à la formule ${plan.name} (${plan.monthlyPriceFCFA} FCFA/mois).`,
+                                });
+                                showToast(`Demande de passage à ${plan.name} envoyée : l'équipe GSPME vous contactera pour l'activation.`);
+                              } catch (err) {
+                                showToast((err as Error).message);
+                              }
+                              return;
+                            }
                             subscriptionService.changeSubscriptionPlan(tenant.id, plan.id);
                             showToast(`Votre formule a été mise à jour avec succès vers ${plan.name} !`);
                           }}
                           className="w-full py-2 bg-[#0F5132] hover:bg-[#0c4028] text-white font-bold rounded-lg cursor-pointer transition-colors text-center"
                         >
-                          Passer à {plan.name}
+                          {api.isEnabled() ? `Demander ${plan.name}` : `Passer à ${plan.name}`}
                         </button>
                       )}
                     </div>

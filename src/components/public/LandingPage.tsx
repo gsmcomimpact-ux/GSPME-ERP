@@ -40,6 +40,7 @@ import {
 } from 'lucide-react';
 import { SubscriptionPlanConfig, SubscriptionPlanId, BillingCycle, CountryCode } from '../../types';
 import { subscriptionService } from '../../services/subscriptionService';
+import { api } from '../../services/api';
 import { COUNTRY_PACKS, formatMoney } from '../../services/currency';
 
 interface LandingPageProps {
@@ -85,11 +86,14 @@ export function LandingPage({ onSelectPlanToSubscribe, onEnterDemoApp, onOpenLog
 
   const plans = subscriptionService.getPlans();
 
-  const handleContactSubmit = (e: React.FormEvent) => {
+  const [contactError, setContactError] = useState('');
+
+  const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!contactName || !contactEmail || !contactMessage) return;
+    setContactError('');
 
-    subscriptionService.submitSupportInquiry({
+    const inquiry = {
       name: contactName,
       email: contactEmail,
       phone: contactPhone,
@@ -97,7 +101,14 @@ export function LandingPage({ onSelectPlanToSubscribe, onEnterDemoApp, onOpenLog
       country: contactCountry,
       subject: contactSubject,
       message: contactMessage,
-    });
+    };
+    try {
+      if (await api.isServerAvailable()) await api.submitContact(inquiry);
+      else subscriptionService.submitSupportInquiry(inquiry); // mode démo : stockage local
+    } catch (err) {
+      setContactError((err as Error).message || "Envoi impossible, merci de réessayer.");
+      return;
+    }
 
     setContactSubmitted(true);
     setTimeout(() => {
@@ -1225,6 +1236,10 @@ export function LandingPage({ onSelectPlanToSubscribe, onEnterDemoApp, onOpenLog
                     className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-[#0F5132]"
                   />
                 </div>
+
+                {contactError && (
+                  <div role="alert" className="text-red-600 font-semibold">{contactError}</div>
+                )}
 
                 <button
                   type="submit"

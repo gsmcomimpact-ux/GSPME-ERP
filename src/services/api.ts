@@ -2,7 +2,7 @@
  * GSPME - Client de l'API SaaS (authentification JWT + synchronisation multi-tenant)
  * Sans serveur joignable, l'application reste en mode démo (localStorage uniquement).
  */
-import type { User } from '../types';
+import type { SupportInquiry, User } from '../types';
 
 const TOKEN_KEY = 'gspme_auth_token';
 const SYNCED_KEYS = new Set([
@@ -117,6 +117,25 @@ class ApiClient {
 
   public createUser(input: { name: string; email: string; password: string; role: string }) {
     return this.request<{ user: User }>('POST', '/users', input);
+  }
+
+  /** Gestion d'une entreprise cliente par le super-admin (formule, statut, limites). */
+  public patchTenant(id: string, changes: Record<string, unknown>) {
+    return this.request<{ tenant: unknown }>('PATCH', `/admin/tenants/${encodeURIComponent(id)}`, changes);
+  }
+
+  /** Formulaire de contact public (aucune session requise). */
+  public submitContact(input: Omit<SupportInquiry, 'id' | 'createdAt' | 'status'>): Promise<{ ok: boolean }> {
+    return this.request<{ ok: boolean }>('POST', '/contact', input);
+  }
+
+  /** Boîte de réception des demandes (super-admin). */
+  public async listInquiries(): Promise<SupportInquiry[]> {
+    return (await this.request<{ inquiries: SupportInquiry[] }>('GET', '/admin/inquiries')).inquiries;
+  }
+
+  public setInquiryStatus(id: string, status: SupportInquiry['status']) {
+    return this.request<{ ok: boolean }>('PATCH', `/admin/inquiries/${encodeURIComponent(id)}`, { status });
   }
 
   /** Répercute une collection locale vers le serveur (regroupe les écritures rapprochées). */
