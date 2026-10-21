@@ -38,6 +38,7 @@ import { CrmModule } from './components/crm/CrmModule';
 import { SalesModule } from './components/sales/SalesModule';
 import { PurchasesModule } from './components/purchases/PurchasesModule';
 import { InventoryModule } from './components/inventory/InventoryModule';
+import { ContactsModule } from './components/contacts/ContactsModule';
 import { PosModule } from './components/pos/PosModule';
 import { TreasuryModule } from './components/treasury/TreasuryModule';
 import { AccountingModule } from './components/accounting/AccountingModule';
@@ -279,6 +280,16 @@ export default function App() {
               tenant={tenant}
               customers={customers}
               opportunities={opportunities}
+              userRole={currentUser.role}
+              searchFilter={globalSearch}
+            />
+          )}
+
+          {activeModule === 'contacts' && (
+            <ContactsModule
+              tenant={tenant}
+              customers={customers}
+              suppliers={suppliers}
               userRole={currentUser.role}
               searchFilter={globalSearch}
             />

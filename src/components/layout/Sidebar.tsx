@@ -26,12 +26,14 @@ import {
   ChevronRight,
   ChevronLeft,
   Globe2,
+  ContactRound,
 } from 'lucide-react';
 import { Tenant } from '../../types';
 
 export type NavModule =
   | 'dashboard'
   | 'crm'
+  | 'contacts'
   | 'sales'
   | 'purchases'
   | 'inventory'
@@ -79,6 +81,7 @@ export function Sidebar({
       title: 'Commercial & Relations',
       items: [
         { id: 'crm' as NavModule, label: 'Clients & CRM', icon: Users },
+        { id: 'contacts' as NavModule, label: 'Clients & Fournisseurs', icon: ContactRound },
         { id: 'sales' as NavModule, label: 'Ventes & Facturation', icon: Receipt },
         { id: 'pos' as NavModule, label: 'Caisse & Point de Vente', icon: Store },
         { id: 'purchases' as NavModule, label: 'Achats & Fournisseurs', icon: ShoppingCart },
