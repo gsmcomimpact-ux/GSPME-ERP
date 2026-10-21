@@ -5,11 +5,12 @@
  */
 
 import React, { useMemo, useState } from 'react';
-import { Plus, Search, Truck, UserPlus, Users } from 'lucide-react';
+import { Download, Plus, Search, UserPlus } from 'lucide-react';
 import { Customer, Role, Supplier, Tenant } from '../../types';
 import { formatMoney } from '../../services/currency';
 import { storage } from '../../services/storage';
 import { EmptyState, Modal, SegmentedTabs } from '../common/UIComponents';
+import { downloadCsv, slugify } from '../../services/exportService';
 
 interface ContactsModuleProps {
   tenant: Tenant;
@@ -136,6 +137,30 @@ export function ContactsModule({ tenant, customers, suppliers, userRole, searchF
 
   const isCustomers = tab === 'customers';
 
+  const exportList = () => {
+    const date = new Date().toISOString().slice(0, 10);
+    if (isCustomers) {
+      downloadCsv(
+        [
+          ['Nom', 'Raison sociale', 'Type', 'Catégorie', 'Téléphone', 'Email', 'Ville', 'N° fiscal', 'Limite de crédit', 'Encours', 'Créé le'],
+          ...filteredCustomers.map(c => [c.name, c.companyName, c.type, c.category, c.phone, c.email, c.city, c.taxNumber, c.creditLimit, c.outstandingBalance, c.createdAt]),
+        ],
+        `clients-${slugify(tenant.name)}-${date}.csv`,
+        { decimalComma: true }
+      );
+    } else {
+      downloadCsv(
+        [
+          ['Nom', 'Catégorie', 'Téléphone', 'Email', 'Ville', 'N° fiscal', 'Délai de paiement (j)', 'Note', 'Solde à payer'],
+          ...filteredSuppliers.map(s => [s.name, s.category, s.phone, s.email, s.city, s.taxNumber, s.paymentTermsDays, s.ratingScore, s.balancePayable]),
+        ],
+        `fournisseurs-${slugify(tenant.name)}-${date}.csv`,
+        { decimalComma: true }
+      );
+    }
+    storage.logAudit('EXPORT', isCustomers ? 'VENTES' : 'ACHATS', `Export de la liste des ${isCustomers ? 'clients' : 'fournisseurs'}`);
+  };
+
   return (
     <div className="space-y-5 text-xs">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -143,6 +168,15 @@ export function ContactsModule({ tenant, customers, suppliers, userRole, searchF
           <h1 className="text-lg font-extrabold text-slate-900">Clients & Fournisseurs</h1>
           <p className="text-slate-500">Créez et retrouvez vos tiers : ils sont ensuite disponibles dans les ventes, achats et la comptabilité.</p>
         </div>
+        <div className="flex items-center gap-2">
+        <button
+          onClick={exportList}
+          className="px-3.5 py-2 border border-slate-300 text-slate-700 hover:bg-slate-100 font-semibold rounded-lg flex items-center gap-1.5 cursor-pointer"
+          title="Exporter la liste affichée vers Excel"
+        >
+          <Download className="w-4 h-4" />
+          Exporter (CSV)
+        </button>
         {!readOnly && (
           <button
             onClick={openModal}
@@ -152,6 +186,7 @@ export function ContactsModule({ tenant, customers, suppliers, userRole, searchF
             {isCustomers ? 'Nouveau client' : 'Nouveau fournisseur'}
           </button>
         )}
+        </div>
       </div>
 
       {flash && (

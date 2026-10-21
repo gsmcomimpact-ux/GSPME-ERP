@@ -26,6 +26,7 @@ import { COUNTRY_PACKS, formatMoney } from '../../services/currency';
 import { Modal, SegmentedTabs } from '../common/UIComponents';
 import { storage } from '../../services/storage';
 import { api } from '../../services/api';
+import { exportAllData } from '../../services/dataExport';
 import { subscriptionService } from '../../services/subscriptionService';
 import { PdfService } from '../../services/pdfService';
 
@@ -51,6 +52,7 @@ export function AdminModule({
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 4000);
   };
+  const [exporting, setExporting] = useState(false);
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [newBranchModalOpen, setNewBranchModalOpen] = useState(false);
 
@@ -503,31 +505,23 @@ export function AdminModule({
 
             <div className="flex items-center gap-2">
               <button
-                onClick={() => {
-                  const dataToExport = {
-                    tenant,
-                    customers: storage.getCustomers(tenant.id),
-                    invoices: storage.getInvoices(tenant.id),
-                    purchases: storage.getPurchases(tenant.id),
-                    products: storage.getProducts(tenant.id),
-                    accounts: storage.getTreasuryAccounts(tenant.id),
-                    exportDate: new Date().toISOString(),
-                  };
-                  const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = `gspme_export_${tenant.name.toLowerCase().replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.json`;
-                  document.body.appendChild(a);
-                  a.click();
-                  document.body.removeChild(a);
-                  URL.revokeObjectURL(url);
+                onClick={async () => {
+                  setExporting(true);
+                  try {
+                    const r = await exportAllData(tenant);
+                    showToast(`Export terminé : ${r.files} fichiers, ${r.records} enregistrements (archive ZIP téléchargée).`);
+                  } catch (err) {
+                    showToast(`Export impossible : ${(err as Error).message}`);
+                  } finally {
+                    setExporting(false);
+                  }
                 }}
-                className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg flex items-center gap-1.5 cursor-pointer transition-colors"
-                title="Exporter l'intégralité des données de l'entreprise (Réversibilité contractuelle)"
+                disabled={exporting}
+                className="px-3 py-2 bg-slate-100 hover:bg-slate-200 disabled:opacity-60 text-slate-700 font-semibold rounded-lg flex items-center gap-1.5 cursor-pointer transition-colors"
+                title="Archive ZIP : un CSV par domaine (ouvrable dans Excel) + toutes les données en JSON (réversibilité contractuelle)"
               >
                 <Download className="w-3.5 h-3.5" />
-                <span>Exporter toutes mes données</span>
+                <span>{exporting ? 'Préparation…' : 'Exporter toutes mes données (ZIP)'}</span>
               </button>
             </div>
           </div>

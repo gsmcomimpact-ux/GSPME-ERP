@@ -29,12 +29,21 @@ Sans serveur joignable, le front reste en mode démo (localStorage).
   demandes de contact reçues depuis le site public, offres et revenus.
 - Une entreprise suspendue ne peut plus se connecter ni synchroniser (message « Abonnement suspendu »).
 
+## Exports
+- **Comptabilité → Bilan & Compte de Résultat** : export **PDF** et **Excel (CSV)** du bilan SYSCOHADA (actif / passif,
+  équilibre vérifié) et du compte de résultat ; la balance et le livre-journal s'exportent en CSV depuis leurs onglets.
+- **Paramètres → Offre SaaS & Quotas → Exporter toutes mes données (ZIP)** : un CSV par domaine (clients, fournisseurs,
+  articles, factures, trésorerie, paie, écritures, balance, bilan…) + `donnees-completes.json` (réversibilité).
+- **Clients & Fournisseurs** : export CSV de la liste affichée.
+Les CSV utilisent `;` et l'UTF-8 avec BOM (ouverture directe dans Excel) ; chaque export est tracé dans le journal d'audit.
+Les états sont calculés à partir des écritures **validées** ; ils ne remplacent pas des états certifiés.
+
 ## Sécurité
 Isolation stricte par tenant (le `tenantId` vient du jeton, jamais du client), champs d'abonnement
 modifiables uniquement par `SUPER_ADMIN_SAAS`, `AUDITEUR_EXTERNE` en lecture seule.
 
 ## Tests
-`npm run test:api` (exige une base MySQL/MariaDB de test via `DB_*` ; **les tables sont vidées**).
+`npm run test:unit` (exports CSV/ZIP, bilan) ; `npm run test:api` (exige une base MySQL/MariaDB de test via `DB_*` ; **les tables sont vidées**).
 
 ## Déploiement sur iFastNet (cPanel « Setup Node.js App », Node ≤ 20)
 1. cPanel → *MySQL Databases* : créez une base, un utilisateur, et associez-les avec *Tous les privilèges*.
