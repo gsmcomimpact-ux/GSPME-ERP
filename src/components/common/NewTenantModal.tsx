@@ -208,6 +208,26 @@ export function NewTenantModal({ isOpen, onClose, onTenantCreated }: NewTenantMo
             />
           </div>
           <div>
+            <label className="block font-semibold text-slate-700 mb-1">Email de l'entreprise</label>
+            <input
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="contact@entreprise.com"
+              className="w-full p-2 border border-slate-300 rounded-lg"
+            />
+          </div>
+          <div>
+            <label className="block font-semibold text-slate-700 mb-1">Adresse du siège</label>
+            <input
+              type="text"
+              value={address}
+              onChange={e => setAddress(e.target.value)}
+              placeholder={`Avenue Principale, ${city}`}
+              className="w-full p-2 border border-slate-300 rounded-lg"
+            />
+          </div>
+          <div>
             <label className="block font-semibold text-slate-700 mb-1">Capital Social ({pack.currency})</label>
             <input
               type="number"

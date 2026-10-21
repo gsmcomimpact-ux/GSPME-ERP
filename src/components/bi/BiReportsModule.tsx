@@ -4,6 +4,7 @@
  * GSPME - Module N : Rapports & Business Intelligence (BI & Analytics)
  */
 
+import { computePeriod } from '../../services/period';
 import React, { useState } from 'react';
 import {
   FileSpreadsheet,
@@ -41,7 +42,11 @@ export function BiReportsModule({
   const [periodFilter, setPeriodFilter] = useState<'MOIS' | 'TRIMESTRE' | 'ANNEE'>('TRIMESTRE');
   const [selectedBranchId, setSelectedBranchId] = useState<string>('ALL');
 
-  const salesInvoices = invoices.filter(i => i.type === 'FACTURE_VENTE');
+  const period = computePeriod(
+    invoices.filter(i => i.type === 'FACTURE_VENTE').map(i => i.date),
+    periodFilter
+  );
+  const salesInvoices = invoices.filter(i => i.type === 'FACTURE_VENTE' && period.contains(i.date));
   const totalRevenue = salesInvoices.reduce((s, i) => s + i.totalTTC, 0);
   const totalStockVal = products.reduce((s, p) => s + p.currentStock * p.purchasePriceHT, 0);
   const totalReceivables = customers.reduce((s, c) => s + c.outstandingBalance, 0);
@@ -98,6 +103,7 @@ export function BiReportsModule({
 
         <div className="flex items-center gap-2">
           {/* Period filter */}
+          <span className="text-[11px] text-slate-500 capitalize" aria-live="polite">{period.label}</span>
           <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-1 text-xs">
             {(['MOIS', 'TRIMESTRE', 'ANNEE'] as const).map(p => (
               <button
@@ -107,7 +113,7 @@ export function BiReportsModule({
                   periodFilter === p ? 'bg-[#0F5132] text-white' : 'text-slate-600 hover:bg-slate-100'
                 }`}
               >
-                {p === 'MOIS' ? 'Ce mois' : p === 'TRIMESTRE' ? 'Trimestre T1' : 'Exercice 2026'}
+                {p === 'MOIS' ? 'Ce mois' : p === 'TRIMESTRE' ? 'Trimestre' : 'Exercice'}
               </button>
             ))}
           </div>

@@ -235,7 +235,7 @@ app.put('/api/collections/:name', requireAuth, asyncH(async (req, res) => {
     for (const raw of rows as Row[]) {
       const target = typeof raw?.id === 'string'
         ? await getUser(raw.id) : undefined;
-      if (!target || (!sa && target.tenant_id !== tid)) continue;
+      if (!target || target.tenant_id !== tid) continue;
       const role = typeof raw.role === 'string' && ROLES.includes(raw.role) && (sa || raw.role !== 'SUPER_ADMIN_SAAS')
         ? raw.role : target.role;
       await run('UPDATE users SET name = ?, role = ?, active = ? WHERE id = ?',

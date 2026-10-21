@@ -148,9 +148,10 @@ class ApiClient {
         this.timers.delete(collection);
         const rows = read();
         if (!Array.isArray(rows)) return;
-        this.request('PUT', `/collections/${collection}`, { rows }).catch(err =>
-          console.error(`Synchronisation "${collection}" échouée :`, err.message)
-        );
+        this.request('PUT', `/collections/${collection}`, { rows }).catch(err => {
+          // Lecture seule (auditeur) : rien à synchroniser, ce n'est pas une erreur
+          if (!/lecture seule/i.test(err.message)) console.error(`Synchronisation "${collection}" échouée :`, err.message);
+        });
       }, 400)
     );
   }

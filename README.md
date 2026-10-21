@@ -19,6 +19,16 @@ Sans serveur joignable, le front reste en mode démo (localStorage).
   `PUT /api/collections/:name`, `POST /api/users`.
 - `src/services/api.ts` + `AuthGate` — connexion, hydratation du cache local, écriture différée vers l'API.
 
+## Accès et rôles
+- **Page d'accueil** : bouton *Connexion* (email + mot de passe) ou *Créer mon entreprise* (essai 14 jours).
+  Une fois connecté, le menu utilisateur (en haut à droite) propose *Se déconnecter*.
+- **Super Admin plateforme** : compte `SUPER_ADMIN_SAAS` créé au démarrage via `SUPER_ADMIN_EMAIL` /
+  `SUPER_ADMIN_PASSWORD`, ou avec `npm run create-admin -- email motdepasse` (sur l'hébergeur :
+  `node create-admin.js email motdepasse` dans `~/gspme`, aussi pour réinitialiser un mot de passe).
+  Lui seul voit l'entrée *Super Admin SaaS* : entreprises clientes (formule, suspension/réactivation),
+  demandes de contact reçues depuis le site public, offres et revenus.
+- Une entreprise suspendue ne peut plus se connecter ni synchroniser (message « Abonnement suspendu »).
+
 ## Sécurité
 Isolation stricte par tenant (le `tenantId` vient du jeton, jamais du client), champs d'abonnement
 modifiables uniquement par `SUPER_ADMIN_SAAS`, `AUDITEUR_EXTERNE` en lecture seule.
