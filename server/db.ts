@@ -88,6 +88,28 @@ const SCHEMA = [
      status VARCHAR(20) NOT NULL DEFAULT 'NOUVEAU',
      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  `CREATE TABLE IF NOT EXISTS payments (
+     id VARCHAR(64) NOT NULL PRIMARY KEY,
+     tenant_id VARCHAR(64) NOT NULL,
+     user_email VARCHAR(255) NOT NULL,
+     plan VARCHAR(20) NOT NULL,
+     cycle VARCHAR(10) NOT NULL,
+     amount INT NOT NULL,
+     currency VARCHAR(8) NOT NULL DEFAULT 'XOF',
+     status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+     chariow_sale_id VARCHAR(64) NULL,
+     note VARCHAR(255) NULL,
+     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+     paid_at TIMESTAMP NULL,
+     UNIQUE KEY uk_payments_sale (chariow_sale_id),
+     KEY idx_payments_tenant (tenant_id),
+     CONSTRAINT fk_payments_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id)
+   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  `CREATE TABLE IF NOT EXISTS webhook_events (
+     delivery_id VARCHAR(100) NOT NULL PRIMARY KEY,
+     event VARCHAR(50) NOT NULL,
+     received_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
   `CREATE TABLE IF NOT EXISTS records (
      tenant_id VARCHAR(64) NOT NULL,
      collection VARCHAR(48) NOT NULL,

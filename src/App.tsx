@@ -8,6 +8,7 @@ import React, { useState, useEffect } from 'react';
 import { storage } from './services/storage';
 import { api } from './services/api';
 import { LoginModal } from './components/auth/LoginModal';
+import { SubscriptionBanner } from './components/layout/SubscriptionBanner';
 import {
   Tenant,
   User,
@@ -75,6 +76,7 @@ export default function App() {
   const [loginOpen, setLoginOpen] = useState(false);
   const [loginMode, setLoginMode] = useState<'login' | 'register'>('login');
   const [loginNotice, setLoginNotice] = useState('');
+  const [adminTab, setAdminTab] = useState<'societe' | 'utilisateurs' | 'abonnements' | 'audit'>('societe');
   const [pendingPlan, setPendingPlan] = useState<SubscriptionPlanId | undefined>();
 
   // Modals
@@ -162,6 +164,11 @@ export default function App() {
           const me = snapshot.users.find(u => u.id === snapshot.activeUserId);
           setServerMode(true);
           if (me?.role === 'SUPER_ADMIN_SAAS') setActiveModule('saas');
+          else if (new URLSearchParams(window.location.search).get('paiement') === 'retour') {
+            // Retour depuis la page de paiement Chariow : on ouvre l'onglet Abonnement
+            setAdminTab('abonnements');
+            setActiveModule('admin');
+          }
           setViewMode('ERP');
         } catch (err) {
           const message = (err as Error).message;
@@ -372,6 +379,16 @@ export default function App() {
             </div>
           </div>
 
+          {serverMode && currentUser.role === 'DIRECTEUR_GENERAL' && (
+            <SubscriptionBanner
+              tenant={tenant}
+              onManage={() => {
+                setAdminTab('abonnements');
+                setActiveModule('admin');
+              }}
+            />
+          )}
+
           {/* Module Switcher (Modules A à P) */}
           {activeModule === 'dashboard' && (
             <ExecutiveDashboard
@@ -540,6 +557,8 @@ export default function App() {
 
           {activeModule === 'admin' && (
             <AdminModule
+              key={adminTab}
+              initialTab={adminTab}
               tenant={tenant}
               users={users}
               auditLogs={auditLogs}

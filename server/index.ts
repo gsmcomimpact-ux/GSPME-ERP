@@ -8,6 +8,8 @@ import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { APP_DIR, all, initDb, one, run, transaction } from './db.ts';
+import { adminListPayments, listPayments, runExpiry, startCheckout, webhookHandler } from './billing.ts';
+import { isBillingEnabled } from './chariow.ts';
 import {
   type AuthedRequest,
   hashPassword,
@@ -53,6 +55,8 @@ type UserRow = {
 const app = express();
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
+// Webhook Chariow : corps BRUT (la signature porte sur les octets exacts), donc avant express.json()
+app.post('/api/webhooks/chariow', express.raw({ type: '*/*', limit: '1mb' }), webhookHandler);
 app.use(express.json({ limit: '10mb' }));
 app.use((_req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -91,7 +95,7 @@ const SUSPENDED_MSG = 'Abonnement suspendu : contactez le support GSPME.';
 
 // ---------------------------------------------------------------- Santé
 app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', service: 'gspme-saas', time: new Date().toISOString() });
+  res.json({ status: 'ok', service: 'gspme-saas', billing: isBillingEnabled(), time: new Date().toISOString() });
 });
 
 // ---------------------------------------------------------------- Auth
@@ -387,6 +391,12 @@ app.patch('/api/admin/inquiries/:id', superGuard, asyncH(async (req, res) => {
   res.json({ ok: true });
 }));
 
+// ---------------------------------------------------------------- Paiement des abonnements (Chariow)
+const billingLimiter = rateLimit(15, 15 * 60 * 1000);
+app.post('/api/billing/checkout', billingLimiter, requireAuth, asyncH(startCheckout));
+app.get('/api/billing/payments', requireAuth, asyncH(listPayments));
+app.get('/api/admin/payments', superGuard, asyncH(adminListPayments));
+
 // ---------------------------------------------------------------- Front statique (production)
 const dist = path.resolve(APP_DIR, 'dist');
 if (fs.existsSync(dist)) {
@@ -428,7 +438,9 @@ export { app };
 if (process.env.GSPME_NO_LISTEN !== '1') {
   ready
     .then(seedSuperAdmin)
+    .then(() => runExpiry())
     .then(() => {
+      setInterval(() => runExpiry().catch(err => console.error('Échéances :', err.message)), 6 * 3600_000).unref();
       const port = Number(process.env.PORT) || 3001;
       app.listen(port, () => console.log(`GSPME SaaS API sur http://localhost:${port}`));
     })

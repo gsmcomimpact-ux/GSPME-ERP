@@ -29,6 +29,10 @@ Sans serveur joignable, le front reste en mode démo (localStorage).
   demandes de contact reçues depuis le site public, offres et revenus.
 - Une entreprise suspendue ne peut plus se connecter ni synchroniser (message « Abonnement suspendu »).
 
+## Paiement des abonnements (Chariow)
+Paiement en ligne des formules Essentiel / Business / Premium (mensuel ou annuel) via Chariow, activation automatique par
+webhook signé, bandeau de renouvellement, suivi des paiements pour le Super Admin. Configuration : `docs/PAIEMENT-CHARIOW.md`.
+
 ## Exports
 - **Comptabilité → Bilan & Compte de Résultat** : export **PDF** et **Excel (CSV)** du bilan SYSCOHADA (actif / passif,
   équilibre vérifié) et du compte de résultat ; la balance et le livre-journal s'exportent en CSV depuis leurs onglets.

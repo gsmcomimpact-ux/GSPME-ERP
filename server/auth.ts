@@ -77,6 +77,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
 export function rateLimit(max: number, windowMs: number) {
   const hits = new Map<string, { count: number; reset: number }>();
   return (req: Request, res: Response, next: NextFunction) => {
+    if (process.env.DISABLE_RATE_LIMIT === '1') return next(); // tests automatisés uniquement
     const key = req.ip || 'unknown';
     const now = Date.now();
     const entry = hits.get(key);

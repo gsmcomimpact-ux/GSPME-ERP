@@ -12,6 +12,19 @@ const SYNCED_KEYS = new Set([
   'pos_receipts', 'projects', 'fixed_assets', 'documents', 'ai_insights',
 ]);
 
+export interface Payment {
+  id: string;
+  tenantId: string;
+  plan: string;
+  cycle: string;
+  amount: number;
+  currency: string;
+  status: 'PENDING' | 'PAID' | 'FAILED' | 'ABANDONED' | 'REVIEW';
+  note: string;
+  createdAt: string;
+  paidAt: string | null;
+}
+
 export interface SyncSnapshot {
   activeTenantId: string;
   activeUserId: string;
@@ -82,6 +95,29 @@ class ApiClient {
       throw new Error((data as { error?: string }).error || `Erreur ${res.status}`);
     }
     return data as T;
+  }
+
+  /** Le paiement en ligne (Chariow) est-il configuré sur le serveur ? */
+  public async isBillingEnabled(): Promise<boolean> {
+    try {
+      const res = await fetch('/api/health');
+      return !!(await res.json())?.billing;
+    } catch {
+      return false;
+    }
+  }
+
+  /** Démarre un paiement d'abonnement : renvoie l'URL de la page de paiement Chariow. */
+  public startCheckout(input: { plan: string; cycle: string; phone?: string }) {
+    return this.request<{ checkoutUrl: string; paymentId: string }>('POST', '/billing/checkout', input);
+  }
+
+  public async listPayments(): Promise<Payment[]> {
+    return (await this.request<{ payments: Payment[] }>('GET', '/billing/payments')).payments;
+  }
+
+  public async adminPayments(): Promise<(Payment & { tenantName: string; email: string })[]> {
+    return (await this.request<{ payments: (Payment & { tenantName: string; email: string })[] }>('GET', '/admin/payments')).payments;
   }
 
   /** Le serveur SaaS répond-il ? (sinon : mode démo local) */

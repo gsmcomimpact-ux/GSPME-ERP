@@ -27,6 +27,7 @@ import { Modal, SegmentedTabs } from '../common/UIComponents';
 import { storage } from '../../services/storage';
 import { api } from '../../services/api';
 import { exportAllData } from '../../services/dataExport';
+import { BillingPanel } from './BillingPanel';
 import { subscriptionService } from '../../services/subscriptionService';
 import { PdfService } from '../../services/pdfService';
 
@@ -36,6 +37,8 @@ interface AdminModuleProps {
   auditLogs: AuditLog[];
   currentUser: User;
   onSelectTenant: (id: string) => void;
+  /** Onglet à ouvrir (ex. « abonnements » depuis le bandeau d'échéance). */
+  initialTab?: 'societe' | 'utilisateurs' | 'abonnements' | 'audit';
 }
 
 export function AdminModule({
@@ -44,8 +47,9 @@ export function AdminModule({
   auditLogs,
   currentUser,
   onSelectTenant,
+  initialTab = 'societe',
 }: AdminModuleProps) {
-  const [activeTab, setActiveTab] = useState<'societe' | 'utilisateurs' | 'abonnements' | 'audit'>('societe');
+  const [activeTab, setActiveTab] = useState<'societe' | 'utilisateurs' | 'abonnements' | 'audit'>(initialTab);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
@@ -499,7 +503,7 @@ export function AdminModule({
                 Formule {tenant.subscriptionPlan} — {formatMoney(tenant.monthlySubscriptionAmount ?? 5000, tenant.currency)} / mois
               </h3>
               <p className="text-slate-500 text-[11px] mt-0.5">
-                Valide jusqu'au {tenant.subscriptionExpiresAt ? new Date(tenant.subscriptionExpiresAt).toLocaleDateString('fr-FR') : '31/12/2026'} · Renouvellement automatique par Mobile Money / Carte
+                Valide jusqu'au {tenant.subscriptionExpiresAt ? new Date(tenant.subscriptionExpiresAt).toLocaleDateString('fr-FR') : '31/12/2026'} · Renouvellement manuel avant l'échéance (Mobile Money / Carte)
               </p>
             </div>
 
@@ -526,6 +530,10 @@ export function AdminModule({
             </div>
           </div>
 
+          {api.isEnabled() ? (
+            <BillingPanel tenant={tenant} currentUser={currentUser} showToast={showToast} />
+          ) : (
+            <>
           {/* Grille des 4 Formules Configurables avec Bouton Changement d'Offre */}
           <div>
             <h4 className="font-bold text-slate-900 mb-2">Changer ou Mettre à Niveau votre Offre</h4>
@@ -579,30 +587,12 @@ export function AdminModule({
                       ) : (
                         <button
                           onClick={async () => {
-                            if (api.isEnabled()) {
-                              // Session serveur : seule l'équipe GSPME active une formule (après règlement)
-                              try {
-                                await api.submitContact({
-                                  name: currentUser.name,
-                                  email: currentUser.email,
-                                  phone: tenant.phone,
-                                  company: tenant.name,
-                                  country: tenant.countryCode,
-                                  subject: `Changement de formule : ${tenant.subscriptionPlan} → ${plan.id}`,
-                                  message: `L'entreprise ${tenant.name} (${tenant.id}) demande le passage à la formule ${plan.name} (${plan.monthlyPriceFCFA} FCFA/mois).`,
-                                });
-                                showToast(`Demande de passage à ${plan.name} envoyée : l'équipe GSPME vous contactera pour l'activation.`);
-                              } catch (err) {
-                                showToast((err as Error).message);
-                              }
-                              return;
-                            }
                             subscriptionService.changeSubscriptionPlan(tenant.id, plan.id);
                             showToast(`Votre formule a été mise à jour avec succès vers ${plan.name} !`);
                           }}
                           className="w-full py-2 bg-[#0F5132] hover:bg-[#0c4028] text-white font-bold rounded-lg cursor-pointer transition-colors text-center"
                         >
-                          {api.isEnabled() ? `Demander ${plan.name}` : `Passer à ${plan.name}`}
+                          Passer à {plan.name}
                         </button>
                       )}
                     </div>
@@ -673,6 +663,8 @@ export function AdminModule({
               </table>
             </div>
           </div>
+            </>
+          )}
         </div>
       )}
 

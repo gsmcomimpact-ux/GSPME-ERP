@@ -61,6 +61,10 @@ export function SaasAdminModule({ tenants, onSelectTenant, onOpenPublicSite }: S
   const [orders, setOrders] = useState<SubscriptionOrder[]>(api.isEnabled() ? [] : subscriptionService.getOrders());
   const [inquiries, setInquiries] = useState<SupportInquiry[]>(subscriptionService.getSupportInquiries());
   const [inquiryError, setInquiryError] = useState('');
+  const [payments, setPayments] = useState<Awaited<ReturnType<typeof api.adminPayments>>>([]);
+  useEffect(() => {
+    if (api.isEnabled()) api.adminPayments().then(setPayments).catch(() => undefined);
+  }, []);
 
   // En session serveur, les demandes viennent de la base (formulaire public de la page d'accueil)
   useEffect(() => {
@@ -228,7 +232,7 @@ export function SaasAdminModule({ tenants, onSelectTenant, onOpenPublicSite }: S
         tabs={[
           { id: 'monetisation', label: 'Console Revenus & Répartition' },
           { id: 'offres', label: 'Gestion des 4 Offres SaaS' },
-          { id: 'commandes', label: 'Historique des Commandes & Paiements', count: orders.length },
+          { id: 'commandes', label: 'Historique des Commandes & Paiements', count: api.isEnabled() ? payments.length : orders.length },
           { id: 'entreprises', label: 'Entreprises Clientes & Quotas', count: tenants.length },
           { id: 'prospects', label: 'Prospects & Demandes de Support', count: inquiries.length },
           { id: 'packs', label: 'Packs Pays Déployés', count: Object.keys(COUNTRY_PACKS).length },
@@ -456,7 +460,51 @@ export function SaasAdminModule({ tenants, onSelectTenant, onOpenPublicSite }: S
       )}
 
       {/* ONGLET 3 : HISTORIQUE DES COMMANDES & TRANSACTIONS SAAS */}
-      {activeTab === 'commandes' && (
+      {activeTab === 'commandes' && api.isEnabled() && (
+        <div className="bg-white rounded-xl border border-slate-200/80 shadow-2xs overflow-hidden">
+          <div className="p-4 bg-slate-50 border-b border-slate-200 text-xs text-slate-600">
+            Paiements d'abonnement encaissés via Chariow. Un paiement « À vérifier » n'a pas activé la formule (montant ou produit inattendu) : contrôlez-le dans Chariow.
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50 border-b border-slate-200 text-slate-500">
+                <tr>
+                  <th className="py-3 px-4 font-semibold">Date</th>
+                  <th className="py-3 px-4 font-semibold">Entreprise</th>
+                  <th className="py-3 px-4 font-semibold">Formule & Cycle</th>
+                  <th className="py-3 px-4 text-right font-semibold">Montant</th>
+                  <th className="py-3 px-4 text-center font-semibold">Statut</th>
+                  <th className="py-3 px-4 font-semibold">Remarque</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {payments.length === 0 && (
+                  <tr><td colSpan={6} className="py-6 text-center text-slate-400">Aucun paiement pour le moment.</td></tr>
+                )}
+                {payments.map(p => (
+                  <tr key={p.id} className="hover:bg-slate-50/50">
+                    <td className="py-3 px-4">{new Date(p.paidAt || p.createdAt).toLocaleString('fr-FR')}</td>
+                    <td className="py-3 px-4">
+                      <div className="font-semibold text-slate-900">{p.tenantName}</div>
+                      <div className="text-[10px] text-slate-400">{p.email}</div>
+                    </td>
+                    <td className="py-3 px-4 font-semibold">{p.plan} <span className="text-slate-400 font-normal">({p.cycle.toLowerCase()})</span></td>
+                    <td className="py-3 px-4 text-right font-bold">{formatMoney(p.amount, p.currency)}</td>
+                    <td className="py-3 px-4 text-center">
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                        p.status === 'PAID' ? 'bg-emerald-100 text-emerald-800' : p.status === 'REVIEW' ? 'bg-rose-100 text-rose-800' : p.status === 'PENDING' ? 'bg-amber-100 text-amber-800' : 'bg-slate-200 text-slate-700'
+                      }`}>{p.status}</span>
+                    </td>
+                    <td className="py-3 px-4 text-slate-500">{p.note}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'commandes' && !api.isEnabled() && (
         <div className="bg-white rounded-xl border border-slate-200/80 shadow-2xs overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
