@@ -54,3 +54,20 @@ export function addPeriod(from: Date, cycle: Cycle): Date {
   d.setUTCDate(Math.min(day, lastDay));
   return d;
 }
+
+/** Modules toujours accessibles, quelle que soit la formule (pilotage, paramètres/abonnement, tiers, outils plateforme). */
+export const ALWAYS_ALLOWED_MODULES = ['dashboard', 'admin', 'contacts', 'tests', 'saas'];
+
+/** Le module est-il inclus dans la formule de l'entreprise ? (liste absente ou vide = pas de restriction) */
+export function isModuleAllowed(activeModules: string[] | undefined, module: string): boolean {
+  if (ALWAYS_ALLOWED_MODULES.includes(module)) return true;
+  if (!Array.isArray(activeModules) || activeModules.length === 0) return true;
+  return activeModules.includes(module);
+}
+
+/** Formule la moins chère qui inclut le module (pour proposer la mise à niveau). */
+export function minPlanForModule(module: string): PlanSpec | null {
+  const order: PlanId[] = ['STARTER', 'ESSENTIEL', 'BUSINESS', 'PREMIUM'];
+  const id = order.find(p => PLAN_CATALOG[p].allowedModules.includes(module));
+  return id ? PLAN_CATALOG[id] : null;
+}

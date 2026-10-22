@@ -9,6 +9,8 @@ import { storage } from './services/storage';
 import { api } from './services/api';
 import { LoginModal } from './components/auth/LoginModal';
 import { SubscriptionBanner } from './components/layout/SubscriptionBanner';
+import { UpgradeNotice } from './components/layout/UpgradeNotice';
+import { isModuleAllowed } from '../shared/plans';
 import {
   Tenant,
   User,
@@ -61,6 +63,13 @@ import { SubscriptionPlanId, BillingCycle } from './types';
 import { NewTenantModal } from './components/common/NewTenantModal';
 import { QuickCreateModal } from './components/common/QuickCreateModal';
 import { Loader2, RotateCcw, ShieldAlert, ShieldCheck, Sparkles } from 'lucide-react';
+
+const MODULE_LABELS: Record<string, string> = {
+  crm: 'Clients & CRM', sales: 'Ventes & Facturation', pos: 'Caisse & Point de Vente', purchases: 'Achats & Fournisseurs',
+  inventory: 'Stocks & Entrepôts', accounting: 'Comptabilité SYSCOHADA', treasury: 'Trésorerie & Caisses', tax: 'Fiscalité & Taxes',
+  payroll: 'Paie & Ressources Humaines', assets: 'Immobilisations', projects: 'Gestion de Projets', documents: 'Documents & GED',
+  bi: 'Rapports & Analytics', ai: 'Assistant IA GSPME',
+};
 
 export default function App() {
   // Navigation & UI State (La page d'accueil par défaut est le Site Public & Tarifs)
@@ -300,6 +309,9 @@ export default function App() {
     );
   }
 
+  // Les modules hors formule sont remplacés par un écran de mise à niveau
+  const moduleAllowed = isModuleAllowed(tenant.activeModules, activeModule);
+
   // VUE 2 : APPLICATION ERP GSPME COMPLÈTE
   return (
     <div className="flex h-screen bg-[#FAF9F6] text-[#1F2937] overflow-hidden font-sans">
@@ -389,8 +401,21 @@ export default function App() {
             />
           )}
 
+          {!moduleAllowed && (
+            <UpgradeNotice
+              moduleId={activeModule}
+              moduleLabel={MODULE_LABELS[activeModule] || activeModule}
+              canUpgrade={currentUser.role === 'DIRECTEUR_GENERAL' || !serverMode}
+              onUpgrade={() => {
+                setAdminTab('abonnements');
+                setActiveModule('admin');
+              }}
+              onBack={() => setActiveModule('dashboard')}
+            />
+          )}
+
           {/* Module Switcher (Modules A à P) */}
-          {activeModule === 'dashboard' && (
+          {moduleAllowed && activeModule === 'dashboard' && (
             <ExecutiveDashboard
               tenant={tenant}
               invoices={invoices}
@@ -404,7 +429,7 @@ export default function App() {
             />
           )}
 
-          {activeModule === 'crm' && (
+          {moduleAllowed && activeModule === 'crm' && (
             <CrmModule
               tenant={tenant}
               customers={customers}
@@ -414,7 +439,7 @@ export default function App() {
             />
           )}
 
-          {activeModule === 'contacts' && (
+          {moduleAllowed && activeModule === 'contacts' && (
             <ContactsModule
               tenant={tenant}
               customers={customers}
@@ -424,7 +449,7 @@ export default function App() {
             />
           )}
 
-          {activeModule === 'sales' && (
+          {moduleAllowed && activeModule === 'sales' && (
             <SalesModule
               tenant={tenant}
               invoices={invoices}
@@ -436,7 +461,7 @@ export default function App() {
             />
           )}
 
-          {activeModule === 'purchases' && (
+          {moduleAllowed && activeModule === 'purchases' && (
             <PurchasesModule
               tenant={tenant}
               purchases={purchases}
@@ -447,7 +472,7 @@ export default function App() {
             />
           )}
 
-          {activeModule === 'inventory' && (
+          {moduleAllowed && activeModule === 'inventory' && (
             <InventoryModule
               tenant={tenant}
               products={products}
@@ -457,7 +482,7 @@ export default function App() {
             />
           )}
 
-          {activeModule === 'pos' && (
+          {moduleAllowed && activeModule === 'pos' && (
             <PosModule
               tenant={tenant}
               products={products}
@@ -466,7 +491,7 @@ export default function App() {
             />
           )}
 
-          {activeModule === 'treasury' && (
+          {moduleAllowed && activeModule === 'treasury' && (
             <TreasuryModule
               tenant={tenant}
               treasuryAccounts={treasuryAccounts}
@@ -476,7 +501,7 @@ export default function App() {
             />
           )}
 
-          {activeModule === 'accounting' && (
+          {moduleAllowed && activeModule === 'accounting' && (
             <AccountingModule
               tenant={tenant}
               journalEntries={journalEntries}
@@ -485,7 +510,7 @@ export default function App() {
             />
           )}
 
-          {activeModule === 'payroll' && (
+          {moduleAllowed && activeModule === 'payroll' && (
             <PayrollModule
               tenant={tenant}
               employees={employees}
@@ -495,7 +520,7 @@ export default function App() {
             />
           )}
 
-          {activeModule === 'projects' && (
+          {moduleAllowed && activeModule === 'projects' && (
             <ProjectsModule
               tenant={tenant}
               projects={projects}
@@ -505,7 +530,7 @@ export default function App() {
             />
           )}
 
-          {activeModule === 'assets' && (
+          {moduleAllowed && activeModule === 'assets' && (
             <FixedAssetsModule
               tenant={tenant}
               fixedAssets={fixedAssets}
@@ -514,7 +539,7 @@ export default function App() {
             />
           )}
 
-          {activeModule === 'documents' && (
+          {moduleAllowed && activeModule === 'documents' && (
             <DocumentsModule
               tenant={tenant}
               documents={documents}
@@ -523,7 +548,7 @@ export default function App() {
             />
           )}
 
-          {activeModule === 'bi' && (
+          {moduleAllowed && activeModule === 'bi' && (
             <BiReportsModule
               tenant={tenant}
               invoices={invoices}
@@ -534,7 +559,7 @@ export default function App() {
             />
           )}
 
-          {activeModule === 'ai' && (
+          {moduleAllowed && activeModule === 'ai' && (
             <AiAssistantModule
               tenant={tenant}
               invoices={invoices}
@@ -546,7 +571,7 @@ export default function App() {
             />
           )}
 
-          {activeModule === 'tax' && (
+          {moduleAllowed && activeModule === 'tax' && (
             <TaxModule
               tenant={tenant}
               invoices={invoices}
@@ -555,7 +580,7 @@ export default function App() {
             />
           )}
 
-          {activeModule === 'admin' && (
+          {moduleAllowed && activeModule === 'admin' && (
             <AdminModule
               key={adminTab}
               initialTab={adminTab}
@@ -567,11 +592,11 @@ export default function App() {
             />
           )}
 
-          {activeModule === 'tests' && (
+          {moduleAllowed && activeModule === 'tests' && (
             <QualityTestsModule tenant={tenant} />
           )}
 
-          {activeModule === 'saas' && currentUser.role !== 'SUPER_ADMIN_SAAS' && (
+          {moduleAllowed && activeModule === 'saas' && currentUser.role !== 'SUPER_ADMIN_SAAS' && (
             <div className="bg-white rounded-xl border border-red-200 p-8 text-center space-y-2">
               <ShieldAlert className="w-8 h-8 text-red-500 mx-auto" />
               <h2 className="text-base font-bold text-slate-900">Accès réservé</h2>
@@ -585,7 +610,7 @@ export default function App() {
             </div>
           )}
 
-          {activeModule === 'saas' && currentUser.role === 'SUPER_ADMIN_SAAS' && (
+          {moduleAllowed && activeModule === 'saas' && currentUser.role === 'SUPER_ADMIN_SAAS' && (
             <SaasAdminModule
               tenants={tenants}
               onSelectTenant={handleSelectTenant}

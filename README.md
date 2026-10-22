@@ -33,6 +33,12 @@ Sans serveur joignable, le front reste en mode démo (localStorage).
 Paiement en ligne des formules Essentiel / Business / Premium (mensuel ou annuel) via Chariow, activation automatique par
 webhook signé, bandeau de renouvellement, suivi des paiements pour le Super Admin. Configuration : `docs/PAIEMENT-CHARIOW.md`.
 
+## Formules et modules
+Chaque formule débloque des modules (`shared/plans.ts`, source unique) : les autres restent visibles avec un cadenas dans le menu
+et affichent un écran de mise à niveau. Le tableau de bord, les Paramètres/abonnement, les Clients & Fournisseurs et les outils
+plateforme restent toujours accessibles. Pendant l'essai (14 jours) tous les modules sont ouverts. Le verrouillage s'applique à l'interface ; les
+limites d'utilisateurs sont, elles, contrôlées par le serveur.
+
 ## Exports
 - **Comptabilité → Bilan & Compte de Résultat** : export **PDF** et **Excel (CSV)** du bilan SYSCOHADA (actif / passif,
   équilibre vérifié) et du compte de résultat ; la balance et le livre-journal s'exportent en CSV depuis leurs onglets.

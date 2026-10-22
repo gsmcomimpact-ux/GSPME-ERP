@@ -27,8 +27,10 @@ import {
   ChevronLeft,
   Globe2,
   ContactRound,
+  Lock,
 } from 'lucide-react';
 import { Role, Tenant } from '../../types';
+import { isModuleAllowed } from '../../../shared/plans';
 
 export type NavModule =
   | 'dashboard'
@@ -189,25 +191,30 @@ export function Sidebar({
               {section.items.map(item => {
                 const Icon = item.icon;
                 const isActive = activeModule === item.id;
+                const locked = !isModuleAllowed(tenant.activeModules, item.id);
                 return (
                   <button
                     key={item.id}
                     onClick={() => onSelectModule(item.id)}
-                    title={collapsed ? item.label : undefined}
+                    title={locked ? `${item.label} — non inclus dans votre formule` : collapsed ? item.label : undefined}
                     className={`w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                       isActive
                         ? 'bg-white/15 text-white font-semibold shadow-2xs border-l-3 border-[#D4AF37]'
                         : 'text-white/75 hover:text-white hover:bg-white/8'
-                    } ${collapsed ? 'justify-center px-0' : ''}`}
+                    } ${locked ? 'opacity-55' : ''} ${collapsed ? 'justify-center px-0' : ''}`}
                   >
                     <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#D4AF37]' : item.highlight ? 'text-[#D4AF37]' : 'text-white/70'}`} />
                     {!collapsed && (
                       <span className="truncate flex items-center justify-between w-full">
                         <span>{item.label}</span>
-                        {item.highlight && (
-                          <span className="text-[9px] bg-[#D4AF37]/20 text-[#D4AF37] px-1 rounded font-bold uppercase">
-                            IA
-                          </span>
+                        {locked ? (
+                          <Lock className="w-3 h-3 text-[#D4AF37]" aria-label="Non inclus dans votre formule" />
+                        ) : (
+                          item.highlight && (
+                            <span className="text-[9px] bg-[#D4AF37]/20 text-[#D4AF37] px-1 rounded font-bold uppercase">
+                              IA
+                            </span>
+                          )
                         )}
                       </span>
                     )}
