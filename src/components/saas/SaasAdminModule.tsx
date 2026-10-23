@@ -4,7 +4,7 @@
  * GSPME - Module P & Q : Console Commerciale & Super Admin SaaS (Monétisation & Gestion des Offres)
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ShieldAlert,
   Server,
@@ -42,6 +42,7 @@ import { COUNTRY_PACKS, formatMoney } from '../../services/currency';
 import { SegmentedTabs } from '../common/UIComponents';
 import { storage } from '../../services/storage';
 import { subscriptionService } from '../../services/subscriptionService';
+import { api } from '../../services/api';
 import { PdfService } from '../../services/pdfService';
 
 interface SaasAdminModuleProps {
@@ -56,8 +57,53 @@ export function SaasAdminModule({ tenants, onSelectTenant, onOpenPublicSite }: S
   >('monetisation');
 
   const [plans, setPlans] = useState<SubscriptionPlanConfig[]>(subscriptionService.getPlans());
-  const [orders, setOrders] = useState<SubscriptionOrder[]>(subscriptionService.getOrders());
+  // Session serveur : pas de passerelle de paiement branchée, donc aucune commande fictive affichée
+  const [orders, setOrders] = useState<SubscriptionOrder[]>(api.isEnabled() ? [] : subscriptionService.getOrders());
   const [inquiries, setInquiries] = useState<SupportInquiry[]>(subscriptionService.getSupportInquiries());
+  const [inquiryError, setInquiryError] = useState('');
+  const [payments, setPayments] = useState<Awaited<ReturnType<typeof api.adminPayments>>>([]);
+  useEffect(() => {
+    if (api.isEnabled()) api.adminPayments().then(setPayments).catch(() => undefined);
+  }, []);
+
+  // En session serveur, les demandes viennent de la base (formulaire public de la page d'accueil)
+  useEffect(() => {
+    if (!api.isEnabled()) return;
+    api.listInquiries().then(setInquiries).catch(err => setInquiryError(err.message));
+  }, []);
+
+  const patchTenant = async (t: Tenant, changes: Record<string, unknown>) => {
+    try {
+      await api.patchTenant(t.id, changes);
+      await storage.refreshFromServer();
+    } catch (err) {
+      alert((err as Error).message);
+    }
+  };
+
+  const changeTenantPlan = (t: Tenant, planId: SubscriptionPlanId) => {
+    const plan = plans.find(p => p.id === planId);
+    if (!plan) return;
+    patchTenant(t, {
+      subscriptionPlan: plan.id,
+      subscriptionStatus: plan.monthlyPriceFCFA > 0 ? 'ACTIVE' : t.subscriptionStatus,
+      monthlySubscriptionAmount: plan.monthlyPriceFCFA,
+      maxUsers: plan.maxUsers,
+      maxStorageMB: plan.maxStorageMB,
+      activeModules: plan.allowedModules,
+    });
+  };
+
+  const changeInquiryStatus = async (id: string, status: SupportInquiry['status']) => {
+    setInquiryError('');
+    try {
+      if (api.isEnabled()) await api.setInquiryStatus(id, status);
+      else subscriptionService.updateInquiryStatus(id, status);
+      setInquiries(prev => prev.map(i => (i.id === id ? { ...i, status } : i)));
+    } catch (err) {
+      setInquiryError((err as Error).message);
+    }
+  };
 
   // Édition d'offre
   const [editingPlanId, setEditingPlanId] = useState<SubscriptionPlanId | null>(null);
@@ -186,7 +232,7 @@ export function SaasAdminModule({ tenants, onSelectTenant, onOpenPublicSite }: S
         tabs={[
           { id: 'monetisation', label: 'Console Revenus & Répartition' },
           { id: 'offres', label: 'Gestion des 4 Offres SaaS' },
-          { id: 'commandes', label: 'Historique des Commandes & Paiements', count: orders.length },
+          { id: 'commandes', label: 'Historique des Commandes & Paiements', count: api.isEnabled() ? payments.length : orders.length },
           { id: 'entreprises', label: 'Entreprises Clientes & Quotas', count: tenants.length },
           { id: 'prospects', label: 'Prospects & Demandes de Support', count: inquiries.length },
           { id: 'packs', label: 'Packs Pays Déployés', count: Object.keys(COUNTRY_PACKS).length },
@@ -414,7 +460,51 @@ export function SaasAdminModule({ tenants, onSelectTenant, onOpenPublicSite }: S
       )}
 
       {/* ONGLET 3 : HISTORIQUE DES COMMANDES & TRANSACTIONS SAAS */}
-      {activeTab === 'commandes' && (
+      {activeTab === 'commandes' && api.isEnabled() && (
+        <div className="bg-white rounded-xl border border-slate-200/80 shadow-2xs overflow-hidden">
+          <div className="p-4 bg-slate-50 border-b border-slate-200 text-xs text-slate-600">
+            Paiements d'abonnement encaissés via Chariow. Un paiement « À vérifier » n'a pas activé la formule (montant ou produit inattendu) : contrôlez-le dans Chariow.
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50 border-b border-slate-200 text-slate-500">
+                <tr>
+                  <th className="py-3 px-4 font-semibold">Date</th>
+                  <th className="py-3 px-4 font-semibold">Entreprise</th>
+                  <th className="py-3 px-4 font-semibold">Formule & Cycle</th>
+                  <th className="py-3 px-4 text-right font-semibold">Montant</th>
+                  <th className="py-3 px-4 text-center font-semibold">Statut</th>
+                  <th className="py-3 px-4 font-semibold">Remarque</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {payments.length === 0 && (
+                  <tr><td colSpan={6} className="py-6 text-center text-slate-400">Aucun paiement pour le moment.</td></tr>
+                )}
+                {payments.map(p => (
+                  <tr key={p.id} className="hover:bg-slate-50/50">
+                    <td className="py-3 px-4">{new Date(p.paidAt || p.createdAt).toLocaleString('fr-FR')}</td>
+                    <td className="py-3 px-4">
+                      <div className="font-semibold text-slate-900">{p.tenantName}</div>
+                      <div className="text-[10px] text-slate-400">{p.email}</div>
+                    </td>
+                    <td className="py-3 px-4 font-semibold">{p.plan} <span className="text-slate-400 font-normal">({p.cycle.toLowerCase()})</span></td>
+                    <td className="py-3 px-4 text-right font-bold">{formatMoney(p.amount, p.currency)}</td>
+                    <td className="py-3 px-4 text-center">
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                        p.status === 'PAID' ? 'bg-emerald-100 text-emerald-800' : p.status === 'REVIEW' ? 'bg-rose-100 text-rose-800' : p.status === 'PENDING' ? 'bg-amber-100 text-amber-800' : 'bg-slate-200 text-slate-700'
+                      }`}>{p.status}</span>
+                    </td>
+                    <td className="py-3 px-4 text-slate-500">{p.note}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'commandes' && !api.isEnabled() && (
         <div className="bg-white rounded-xl border border-slate-200/80 shadow-2xs overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
@@ -531,12 +621,47 @@ export function SaasAdminModule({ tenants, onSelectTenant, onOpenPublicSite }: S
                       {((t.maxStorageMB || 5120) / 1024).toFixed(0)} Go
                     </td>
                     <td className="py-3 px-4 text-right">
-                      <button
-                        onClick={() => onSelectTenant(t.id)}
-                        className="px-2.5 py-1 text-[#0F5132] hover:bg-[#0F5132]/10 rounded font-semibold text-[11px] cursor-pointer"
-                      >
-                        Accéder à l'espace →
-                      </button>
+                      {api.isEnabled() ? (
+                        t.id === 'tenant-platform' ? (
+                          <span className="text-[11px] text-slate-400">Espace plateforme</span>
+                        ) : (
+                          <div className="flex items-center justify-end gap-1.5">
+                            <select
+                              aria-label={`Formule de ${t.name}`}
+                              value={['STARTER', 'ESSENTIEL', 'BUSINESS', 'PREMIUM'].includes(t.subscriptionPlan) ? t.subscriptionPlan : ''}
+                              onChange={e => changeTenantPlan(t, e.target.value as SubscriptionPlanId)}
+                              className="p-1 border border-slate-300 rounded text-[11px] bg-white"
+                            >
+                              <option value="" disabled>—</option>
+                              {plans.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                            </select>
+                            {t.subscriptionStatus === 'CANCELLED' ? (
+                              <button
+                                onClick={() => patchTenant(t, { subscriptionStatus: 'ACTIVE' })}
+                                className="px-2.5 py-1 text-emerald-700 hover:bg-emerald-50 rounded font-semibold text-[11px] cursor-pointer"
+                              >
+                                Réactiver
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  if (confirm(`Suspendre l'accès de « ${t.name} » ?`)) patchTenant(t, { subscriptionStatus: 'CANCELLED' });
+                                }}
+                                className="px-2.5 py-1 text-red-700 hover:bg-red-50 rounded font-semibold text-[11px] cursor-pointer"
+                              >
+                                Suspendre
+                              </button>
+                            )}
+                          </div>
+                        )
+                      ) : (
+                        <button
+                          onClick={() => onSelectTenant(t.id)}
+                          className="px-2.5 py-1 text-[#0F5132] hover:bg-[#0F5132]/10 rounded font-semibold text-[11px] cursor-pointer"
+                        >
+                          Accéder à l'espace →
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -550,6 +675,8 @@ export function SaasAdminModule({ tenants, onSelectTenant, onOpenPublicSite }: S
       {activeTab === 'prospects' && (
         <div className="bg-white rounded-xl border border-slate-200/80 shadow-2xs p-5 space-y-4">
           <h3 className="font-bold text-slate-900 text-sm">Demandes de Contact Recueillies sur le Site Public</h3>
+          {inquiryError && <div role="alert" className="text-xs text-red-600 font-semibold">{inquiryError}</div>}
+          {inquiries.length === 0 && <p className="text-xs text-slate-500">Aucune demande pour le moment.</p>}
 
           <div className="space-y-3">
             {inquiries.map(inq => (
@@ -566,8 +693,10 @@ export function SaasAdminModule({ tenants, onSelectTenant, onOpenPublicSite }: S
                       {inq.country}
                     </span>
                   </div>
-                  <span className="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded">
-                    {inq.status}
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                    inq.status === 'TRAITE' ? 'bg-emerald-100 text-emerald-800' : inq.status === 'EN_COURS' ? 'bg-sky-100 text-sky-800' : 'bg-amber-100 text-amber-800'
+                  }`}>
+                    {inq.status.replace('_', ' ')}
                   </span>
                 </div>
 
@@ -583,6 +712,31 @@ export function SaasAdminModule({ tenants, onSelectTenant, onOpenPublicSite }: S
                   <span>Email : <strong>{inq.email}</strong></span>
                   <span>Téléphone : <strong>{inq.phone}</strong></span>
                   <span>Date : {new Date(inq.createdAt).toLocaleString('fr-FR')}</span>
+                </div>
+
+                <div className="flex items-center gap-2 pt-1">
+                  {inq.status !== 'EN_COURS' && inq.status !== 'TRAITE' && (
+                    <button
+                      onClick={() => changeInquiryStatus(inq.id, 'EN_COURS')}
+                      className="px-2.5 py-1 rounded-md border border-sky-200 bg-sky-50 text-sky-800 font-semibold hover:bg-sky-100 cursor-pointer"
+                    >
+                      Prendre en charge
+                    </button>
+                  )}
+                  {inq.status !== 'TRAITE' && (
+                    <button
+                      onClick={() => changeInquiryStatus(inq.id, 'TRAITE')}
+                      className="px-2.5 py-1 rounded-md border border-emerald-200 bg-emerald-50 text-emerald-800 font-semibold hover:bg-emerald-100 cursor-pointer"
+                    >
+                      Marquer comme traité
+                    </button>
+                  )}
+                  <a
+                    href={`mailto:${inq.email}?subject=${encodeURIComponent('Re: ' + inq.subject)}`}
+                    className="px-2.5 py-1 rounded-md border border-slate-200 bg-white text-slate-700 font-semibold hover:bg-slate-50"
+                  >
+                    Répondre par email
+                  </a>
                 </div>
               </div>
             ))}

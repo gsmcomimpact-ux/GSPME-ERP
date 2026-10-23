@@ -7,6 +7,7 @@
 import { jsPDF } from 'jspdf';
 import { Invoice, Payslip, PosReceipt, SubscriptionOrder, StoredDocument, Tenant } from '../types';
 import { formatMoney } from './currency';
+import type { FinancialStatements, StatementSection } from './financialStatements';
 
 export class PdfService {
   /**
@@ -641,6 +642,138 @@ export class PdfService {
     doc.text(`GSPME GED · Système Électronique d'Archivage Légal · ${docItem.title}`, 105, 292, { align: 'center' });
 
     doc.save(`${docItem.title.replace(/[^a-zA-Z0-9_\-]/g, '_')}.pdf`);
+  }
+
+
+  /**
+   * Bilan (Actif / Passif) et Compte de Résultat SYSCOHADA au format PDF
+   */
+  public static downloadFinancialStatementsPdf(s: FinancialStatements, tenant: Tenant, filename?: string) {
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const money = (n: number) => formatMoney(n, tenant.currency);
+    const LEFT = 14;
+    const RIGHT = 196;
+    let y = 0;
+
+    const header = (title: string) => {
+      doc.setFillColor(15, 81, 50);
+      doc.rect(0, 0, 210, 8, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.setTextColor(15, 81, 50);
+      doc.text(tenant.name.toUpperCase(), LEFT, 20);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.5);
+      doc.setTextColor(71, 85, 105);
+      doc.text(`${tenant.legalForm} · RCCM : ${tenant.tradeRegisterNumber} · NIF/NCC : ${tenant.taxNumber}`, LEFT, 25);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.setTextColor(15, 23, 42);
+      doc.text(title, LEFT, 35);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.5);
+      doc.setTextColor(71, 85, 105);
+      doc.text(`Arrêté au ${s.asOf} · Montants en ${tenant.currency === 'XOF' || tenant.currency === 'XAF' ? 'FR CFA' : tenant.currency}`, LEFT, 40);
+      y = 48;
+    };
+
+    const ensure = (needed: number) => {
+      if (y + needed > 280) {
+        doc.addPage();
+        header('(suite)');
+      }
+    };
+
+    const sectionBlock = (sec: StatementSection) => {
+      ensure(14);
+      doc.setFillColor(241, 245, 249);
+      doc.rect(LEFT, y - 4, RIGHT - LEFT, 6.5, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8.5);
+      doc.setTextColor(15, 81, 50);
+      doc.text(sec.title.toUpperCase(), LEFT + 2, y);
+      doc.text(money(sec.total), RIGHT - 2, y, { align: 'right' });
+      y += 6;
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(30, 41, 59);
+      if (sec.lines.length === 0) {
+        doc.setTextColor(148, 163, 184);
+        doc.text('— Aucun solde —', LEFT + 10, y);
+        y += 5;
+      }
+      for (const l of sec.lines) {
+        ensure(6);
+        doc.text(l.code, LEFT + 4, y);
+        doc.text(l.label.slice(0, 70), LEFT + 24, y);
+        doc.text(money(l.amount), RIGHT - 2, y, { align: 'right' });
+        y += 5;
+      }
+      y += 2;
+    };
+
+    const totalLine = (label: string, amount: number) => {
+      ensure(10);
+      doc.setDrawColor(15, 81, 50);
+      doc.line(LEFT, y - 3, RIGHT, y - 3);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.setTextColor(15, 23, 42);
+      doc.text(label, LEFT + 2, y + 2);
+      doc.text(money(amount), RIGHT - 2, y + 2, { align: 'right' });
+      doc.setFontSize(8.5);
+      y += 10;
+    };
+
+    header('BILAN SYSCOHADA RÉVISÉ — ACTIF');
+    s.actif.forEach(sectionBlock);
+    totalLine('TOTAL ACTIF', s.totalActif);
+
+    ensure(30);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.setTextColor(15, 23, 42);
+    doc.text('BILAN SYSCOHADA RÉVISÉ — PASSIF', LEFT, y);
+    doc.setFontSize(8.5);
+    y += 10;
+    s.passif.forEach(sectionBlock);
+    totalLine('TOTAL PASSIF', s.totalPassif);
+    if (s.ecart !== 0) {
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(185, 28, 28);
+      doc.text(`Attention : écart actif − passif de ${money(s.ecart)} (écritures déséquilibrées ou comptes hors bilan).`, LEFT, y - 3);
+      y += 4;
+    }
+
+    doc.addPage();
+    header('COMPTE DE RÉSULTAT SYSCOHADA RÉVISÉ');
+    sectionBlock(s.produits);
+    sectionBlock(s.charges);
+    totalLine(s.resultat >= 0 ? 'RÉSULTAT NET : BÉNÉFICE' : 'RÉSULTAT NET : PERTE', s.resultat);
+
+    ensure(20);
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(7.5);
+    doc.setTextColor(100, 116, 139);
+    doc.text(
+      doc.splitTextToSize(
+        "État de gestion établi automatiquement à partir des écritures validées du journal. Il ne se substitue pas aux états financiers certifiés par un expert-comptable ou un commissaire aux comptes.",
+        RIGHT - LEFT
+      ),
+      LEFT,
+      y + 4
+    );
+
+    const pages = doc.getNumberOfPages();
+    for (let i = 1; i <= pages; i++) {
+      doc.setPage(i);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.5);
+      doc.setTextColor(148, 163, 184);
+      doc.text(`Généré par GSPME-ERP le ${new Date().toLocaleDateString('fr-FR')}`, LEFT, 290);
+      doc.text(`Page ${i} / ${pages}`, RIGHT, 290, { align: 'right' });
+    }
+
+    doc.save(filename || `bilan-${s.asOf}.pdf`);
   }
 
   /**

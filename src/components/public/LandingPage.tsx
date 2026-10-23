@@ -40,14 +40,22 @@ import {
 } from 'lucide-react';
 import { SubscriptionPlanConfig, SubscriptionPlanId, BillingCycle, CountryCode } from '../../types';
 import { subscriptionService } from '../../services/subscriptionService';
+import { api } from '../../services/api';
 import { COUNTRY_PACKS, formatMoney } from '../../services/currency';
 
 interface LandingPageProps {
   onSelectPlanToSubscribe: (planId: SubscriptionPlanId, cycle: BillingCycle) => void;
   onEnterDemoApp: () => void;
+  /** Ouvre l'espace de connexion (email + mot de passe). */
+  onOpenLogin: () => void;
+  /** Utilisateur actuellement connecté (null si aucune session). */
+  session?: { name: string; role: string } | null;
+  /** Retourne dans l'ERP quand une session est ouverte. */
+  onEnterApp?: () => void;
+  onLogout?: () => void;
 }
 
-export function LandingPage({ onSelectPlanToSubscribe, onEnterDemoApp }: LandingPageProps) {
+export function LandingPage({ onSelectPlanToSubscribe, onEnterDemoApp, onOpenLogin, session, onEnterApp, onLogout }: LandingPageProps) {
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('MENSUEL');
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -78,11 +86,14 @@ export function LandingPage({ onSelectPlanToSubscribe, onEnterDemoApp }: Landing
 
   const plans = subscriptionService.getPlans();
 
-  const handleContactSubmit = (e: React.FormEvent) => {
+  const [contactError, setContactError] = useState('');
+
+  const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!contactName || !contactEmail || !contactMessage) return;
+    setContactError('');
 
-    subscriptionService.submitSupportInquiry({
+    const inquiry = {
       name: contactName,
       email: contactEmail,
       phone: contactPhone,
@@ -90,7 +101,14 @@ export function LandingPage({ onSelectPlanToSubscribe, onEnterDemoApp }: Landing
       country: contactCountry,
       subject: contactSubject,
       message: contactMessage,
-    });
+    };
+    try {
+      if (await api.isServerAvailable()) await api.submitContact(inquiry);
+      else subscriptionService.submitSupportInquiry(inquiry); // mode démo : stockage local
+    } catch (err) {
+      setContactError((err as Error).message || "Envoi impossible, merci de réessayer.");
+      return;
+    }
 
     setContactSubmitted(true);
     setTimeout(() => {
@@ -143,7 +161,7 @@ export function LandingPage({ onSelectPlanToSubscribe, onEnterDemoApp }: Landing
           >
             <div className="w-10 h-10 rounded-xl overflow-hidden bg-white p-0.5 border border-slate-200/90 shadow-2xs group-hover:scale-105 transition-transform shrink-0">
               <img
-                src="/src/assets/images/gspme_logo.jpg"
+                src="/gspme_logo.jpg"
                 alt="GSPME-ERP"
                 referrerPolicy="no-referrer"
                 className="w-full h-full object-contain rounded-lg"
@@ -200,14 +218,42 @@ export function LandingPage({ onSelectPlanToSubscribe, onEnterDemoApp }: Landing
 
           {/* Right Header Actions */}
           <div className="flex items-center gap-2 sm:gap-3">
-            <button
-              onClick={onEnterDemoApp}
-              className="px-3 sm:px-3.5 py-2 text-xs font-bold text-[#0F5132] hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
-              title="Tester l'ERP en direct avec données démo"
-            >
-              <span>Accéder à l'ERP (Démo)</span>
-              <ExternalLink className="w-3.5 h-3.5 opacity-70" />
-            </button>
+            {session ? (
+              <>
+                <button
+                  onClick={onEnterApp}
+                  className="px-3 sm:px-3.5 py-2 text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
+                  title={`Connecté : ${session.name}`}
+                >
+                  <span>Mon espace</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={onLogout}
+                  className="px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                >
+                  Déconnexion
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={onOpenLogin}
+                  className="px-3 sm:px-3.5 py-2 text-xs font-bold border border-[#0F5132]/30 text-[#0F5132] hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
+                >
+                  <Lock className="w-3.5 h-3.5" />
+                  <span>Connexion</span>
+                </button>
+                <button
+                  onClick={onEnterDemoApp}
+                  className="hidden md:flex px-3 sm:px-3.5 py-2 text-xs font-bold text-[#0F5132] hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer items-center gap-1.5"
+                  title="Tester l'ERP en direct avec données démo"
+                >
+                  <span>Accéder à l'ERP (Démo)</span>
+                  <ExternalLink className="w-3.5 h-3.5 opacity-70" />
+                </button>
+              </>
+            )}
 
             <button
               onClick={() => scrollToSection('tarifs')}
@@ -268,16 +314,40 @@ export function LandingPage({ onSelectPlanToSubscribe, onEnterDemoApp }: Landing
               Support Régional & Contact
             </button>
             <div className="pt-2 border-t border-slate-100 flex flex-col gap-2">
-              <button
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  onEnterDemoApp();
-                }}
-                className="w-full py-2.5 bg-slate-900 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-2"
-              >
-                <span>Connexion / Espace Entreprise</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </button>
+              {session ? (
+                <>
+                  <button
+                    onClick={() => { setMobileMenuOpen(false); onEnterApp?.(); }}
+                    className="w-full py-2.5 bg-slate-900 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-2"
+                  >
+                    <span>Mon espace ({session.name})</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => { setMobileMenuOpen(false); onLogout?.(); }}
+                    className="w-full py-2.5 border border-slate-300 text-slate-700 rounded-lg text-xs font-bold"
+                  >
+                    Déconnexion
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => { setMobileMenuOpen(false); onOpenLogin(); }}
+                    className="w-full py-2.5 bg-slate-900 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-2"
+                  >
+                    <Lock className="w-3.5 h-3.5" />
+                    <span>Connexion / Espace Entreprise</span>
+                  </button>
+                  <button
+                    onClick={() => { setMobileMenuOpen(false); onEnterDemoApp(); }}
+                    className="w-full py-2.5 border border-[#0F5132]/30 text-[#0F5132] rounded-lg text-xs font-bold flex items-center justify-center gap-2"
+                  >
+                    <span>Accéder à l'ERP (Démo)</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </button>
+                </>
+              )}
               <button
                 onClick={() => scrollToSection('tarifs')}
                 className="w-full py-2.5 bg-[#0F5132] text-white rounded-lg text-xs font-bold flex items-center justify-center gap-2"
@@ -297,7 +367,7 @@ export function LandingPage({ onSelectPlanToSubscribe, onEnterDemoApp }: Landing
             <div className="flex flex-col items-center justify-center gap-2">
               <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden bg-white p-1 border border-slate-200 shadow-md hover:scale-105 transition-transform">
                 <img
-                  src="/src/assets/images/gspme_logo.jpg"
+                  src="/gspme_logo.jpg"
                   alt="GSPME-ERP - Croissance connectée en Afrique"
                   referrerPolicy="no-referrer"
                   className="w-full h-full object-contain rounded-xl"
@@ -1167,6 +1237,10 @@ export function LandingPage({ onSelectPlanToSubscribe, onEnterDemoApp }: Landing
                   />
                 </div>
 
+                {contactError && (
+                  <div role="alert" className="text-red-600 font-semibold">{contactError}</div>
+                )}
+
                 <button
                   type="submit"
                   className="w-full py-2.5 bg-[#0F5132] hover:bg-[#0c4028] text-white font-bold rounded-lg shadow-2xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
@@ -1189,7 +1263,7 @@ export function LandingPage({ onSelectPlanToSubscribe, onEnterDemoApp }: Landing
               <button onClick={scrollToTop} className="flex items-center gap-2.5 cursor-pointer text-left">
                 <div className="w-9 h-9 rounded-xl overflow-hidden bg-white p-0.5 border border-white/20 shadow-xs shrink-0">
                   <img
-                    src="/src/assets/images/gspme_logo.jpg"
+                    src="/gspme_logo.jpg"
                     alt="GSPME-ERP"
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-contain rounded-lg"

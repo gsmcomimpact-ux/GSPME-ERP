@@ -466,6 +466,16 @@ export function PayrollModule({
                 className="w-full p-2 border border-slate-300 rounded-lg"
               />
             </div>
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">Indemnité Logement</label>
+              <input
+                type="number"
+                min="0"
+                value={housingAllowance}
+                onChange={e => setHousingAllowance(parseFloat(e.target.value) || 0)}
+                className="w-full p-2 border border-slate-300 rounded-lg"
+              />
+            </div>
           </div>
 
           <div className="flex justify-end gap-2 pt-3">

@@ -1,0 +1,100 @@
+/**
+ * GSPME SaaS - Client Chariow (paiement des abonnements) : création de checkout + vérification des webhooks (Pulses).
+ * Docs : https://chariow.dev/fr/guides/checkout · /fr/guides/pulses · /fr/guides/pulse-security
+ */
+import { createHmac, timingSafeEqual } from 'node:crypto';
+import { type Cycle, type PaidPlanId } from '../shared/plans.ts';
+
+export const chariowConfig = () => ({
+  apiUrl: (process.env.CHARIOW_API_URL || 'https://api.chariow.com/v1').replace(/\/+$/, ''),
+  apiKey: process.env.CHARIOW_API_KEY || '',
+  webhookSecret: process.env.CHARIOW_WEBHOOK_SECRET || '',
+  appUrl: (process.env.APP_URL || '').replace(/\/+$/, ''),
+});
+
+/** Identifiant Chariow (prd_…) du produit « Licence » correspondant à une formule et un cycle. */
+export const productIdFor = (plan: PaidPlanId, cycle: Cycle): string =>
+  (process.env[`CHARIOW_PRODUCT_${plan}_${cycle}`] || '').trim();
+
+export const isBillingEnabled = (): boolean => {
+  const c = chariowConfig();
+  return !!(c.apiKey && c.webhookSecret);
+};
+
+export class ChariowError extends Error {
+  constructor(message: string, public status: number, public fields?: Record<string, string[]>) {
+    super(message);
+  }
+}
+
+export interface CheckoutInput {
+  productId: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
+  countryCode: string;
+  redirectUrl?: string;
+  metadata: Record<string, string>;
+  customerIp?: string;
+}
+
+export interface CheckoutResult {
+  step: 'payment' | 'completed' | 'already_purchased' | string;
+  saleId: string | null;
+  checkoutUrl: string | null;
+}
+
+/** Crée une vente Chariow et renvoie l'URL de paiement hébergée. */
+export async function createCheckout(input: CheckoutInput): Promise<CheckoutResult> {
+  const { apiUrl, apiKey } = chariowConfig();
+  const body: Record<string, unknown> = {
+    product_id: input.productId,
+    email: input.email,
+    first_name: input.firstName.slice(0, 50),
+    last_name: input.lastName.slice(0, 50),
+    phone: { number: input.phoneNumber, country_code: input.countryCode },
+    custom_metadata: input.metadata,
+  };
+  if (input.redirectUrl) body.redirect_url = input.redirectUrl;
+  if (input.customerIp) body.customer_ip = input.customerIp;
+
+  let res: Response;
+  try {
+    res = await fetch(`${apiUrl}/checkout`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(30_000),
+    });
+  } catch {
+    throw new ChariowError('Le service de paiement est injoignable, réessayez dans un instant.', 503);
+  }
+  const json = (await res.json().catch(() => ({}))) as {
+    message?: string;
+    errors?: Record<string, string[]>;
+    data?: { step?: string; purchase?: { id?: string } | null; payment?: { checkout_url?: string | null } };
+  };
+  if (!res.ok) {
+    const friendly =
+      res.status === 401 ? 'Configuration du paiement invalide (clé API).'
+      : res.status === 404 ? 'Produit de paiement introuvable ou non publié.'
+      : res.status === 429 ? 'Trop de tentatives, réessayez dans un instant.'
+      : json.message || 'Le paiement n\'a pas pu démarrer.';
+    throw new ChariowError(friendly, res.status === 422 || res.status === 400 ? 400 : 502, json.errors);
+  }
+  return {
+    step: json.data?.step || '',
+    saleId: json.data?.purchase?.id || null,
+    checkoutUrl: json.data?.payment?.checkout_url || null,
+  };
+}
+
+/** Vérifie `x-chariow-signature` = « sha256= » + HMAC-SHA256(corps brut, secret du Pulse), en temps constant. */
+export function verifySignature(rawBody: Buffer, received: string | undefined, secret: string): boolean {
+  if (!secret || !received) return false;
+  const expected = 'sha256=' + createHmac('sha256', secret).update(rawBody).digest('hex');
+  const a = Buffer.from(received);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
+}

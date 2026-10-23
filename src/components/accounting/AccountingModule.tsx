@@ -25,6 +25,8 @@ import { formatMoney } from '../../services/currency';
 import { Modal, SegmentedTabs } from '../common/UIComponents';
 import { storage } from '../../services/storage';
 import { PdfService } from '../../services/pdfService';
+import { computeStatements, balanceToRows, journalToRows, statementsToRows } from '../../services/financialStatements';
+import { downloadCsv, slugify } from '../../services/exportService';
 
 interface AccountingModuleProps {
   tenant: Tenant;
@@ -115,6 +117,18 @@ export function AccountingModule({
   const resultatNetEstime = ebe;
 
   const [entryError, setEntryError] = useState<string | null>(null);
+
+  // États financiers SYSCOHADA (même source pour l'écran et les exports)
+  const statements = computeStatements(journalEntries);
+  const fileBase = `${slugify(tenant.name)}-${statements.asOf}`;
+  const exportBilanPdf = () => {
+    PdfService.downloadFinancialStatementsPdf(statements, tenant, `bilan-${fileBase}.pdf`);
+    storage.logAudit('EXPORT', 'COMPTABILITE', 'Export du bilan et du compte de résultat (PDF)');
+  };
+  const exportBilanCsv = () => {
+    downloadCsv(statementsToRows(statements, tenant.name, tenant.currency), `bilan-${fileBase}.csv`, { decimalComma: true });
+    storage.logAudit('EXPORT', 'COMPTABILITE', 'Export du bilan et du compte de résultat (Excel/CSV)');
+  };
 
   const handleManualEntrySubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -235,6 +249,17 @@ export function AccountingModule({
             </div>
 
             <div className="flex items-center gap-3 text-slate-700 font-medium">
+              <button
+                onClick={() => {
+                  downloadCsv(journalToRows(filteredEntries), `journal-${fileBase}.csv`, { decimalComma: true });
+                  storage.logAudit('EXPORT', 'COMPTABILITE', `Export du livre-journal (${filteredEntries.length} écritures)`);
+                }}
+                className="px-2.5 py-1 border border-slate-300 rounded text-slate-700 hover:bg-slate-100 flex items-center gap-1.5 cursor-pointer"
+                title="Exporter les écritures affichées vers Excel"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Exporter CSV</span>
+              </button>
               <span>
                 Total Débit : <strong>{formatMoney(totalJournalDebit, tenant.currency)}</strong>
               </span>
@@ -321,6 +346,18 @@ export function AccountingModule({
               <h3 className="font-bold text-slate-900">Balance Générale des Comptes (Norme SYSCOHADA)</h3>
               <p className="text-slate-500 text-[11px]">Exercice en cours · {tenant.name}</p>
             </div>
+            <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                downloadCsv(balanceToRows(statements.balance), `balance-${fileBase}.csv`, { decimalComma: true });
+                storage.logAudit('EXPORT', 'COMPTABILITE', 'Export de la balance générale (CSV)');
+              }}
+              className="px-3 py-1.5 border border-slate-300 rounded text-slate-700 hover:bg-slate-100 flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
+              title="Exporter la balance générale vers Excel"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Exporter en Excel (CSV)</span>
+            </button>
             <button
               onClick={() => PdfService.printCurrent()}
               className="px-3 py-1.5 border border-slate-300 rounded text-slate-700 hover:bg-slate-100 flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
@@ -329,6 +366,7 @@ export function AccountingModule({
               <Printer className="w-3.5 h-3.5" />
               <span>Imprimer la Balance</span>
             </button>
+            </div>
           </div>
 
           <div className="overflow-x-auto">
@@ -389,6 +427,28 @@ export function AccountingModule({
 
       {/* TAB: Bilan & Compte de Résultat */}
       {activeTab === 'etats' && (
+        <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 bg-white p-3 rounded-xl border border-slate-200/80 text-xs">
+          <span className="text-slate-600">
+            États établis à partir de <strong>{journalEntries.filter(e => e.validated !== false).length}</strong> écritures validées.
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={exportBilanPdf}
+              className="px-3 py-1.5 bg-[#0F5132] hover:bg-[#0c4028] text-white font-semibold rounded-lg flex items-center gap-1.5 cursor-pointer"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              <span>Exporter en PDF</span>
+            </button>
+            <button
+              onClick={exportBilanCsv}
+              className="px-3 py-1.5 border border-slate-300 text-slate-700 hover:bg-slate-100 font-semibold rounded-lg flex items-center gap-1.5 cursor-pointer"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+              <span>Exporter en Excel (CSV)</span>
+            </button>
+          </div>
+        </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Compte de Résultat SYSCOHADA */}
           <div className="bg-white rounded-xl border border-slate-200/80 p-5 shadow-2xs space-y-4">
@@ -444,91 +504,43 @@ export function AccountingModule({
           <div className="bg-white rounded-xl border border-slate-200/80 p-5 shadow-2xs space-y-4">
             <div className="pb-3 border-b border-slate-200">
               <h3 className="text-sm font-bold text-slate-900">Bilan Synthétique (Actif / Passif)</h3>
-              <p className="text-xs text-slate-500">Structure patrimoniale en {tenant.currency}</p>
+              <p className="text-xs text-slate-500">Structure patrimoniale en {tenant.currency} · arrêtée au {statements.asOf}</p>
             </div>
 
             <div className="grid grid-cols-2 gap-4 text-xs">
-              {/* ACTIF */}
-              <div className="space-y-3 bg-slate-50 p-3 rounded-lg border border-slate-200">
-                <h4 className="font-bold text-slate-900 border-b border-slate-200 pb-1 uppercase tracking-wider text-[11px]">
-                  ACTIF (Emplois)
-                </h4>
-                <div>
-                  <div className="text-slate-500">Actif Immobilisé (Classe 2)</div>
-                  <div className="font-bold text-slate-800">
-                    {formatMoney(
-                      balanceAccounts.filter(a => a.classe === 2).reduce((s, a) => s + a.soldeDebiteur, 0),
-                      tenant.currency
-                    )}
+              {[
+                { title: 'ACTIF (Emplois)', sections: statements.actif, total: statements.totalActif },
+                { title: 'PASSIF (Ressources)', sections: statements.passif, total: statements.totalPassif },
+              ].map(col => (
+                <div key={col.title} className="space-y-3 bg-slate-50 p-3 rounded-lg border border-slate-200">
+                  <h4 className="font-bold text-slate-900 border-b border-slate-200 pb-1 uppercase tracking-wider text-[11px]">
+                    {col.title}
+                  </h4>
+                  {col.sections.map(sec => (
+                    <div key={sec.title}>
+                      <div className="text-slate-500">{sec.title}</div>
+                      <div className="font-bold text-slate-800">{formatMoney(sec.total, tenant.currency)}</div>
+                    </div>
+                  ))}
+                  <div className="pt-2 border-t border-slate-200 flex justify-between font-extrabold text-[#0F5132]">
+                    <span>Total</span>
+                    <span>{formatMoney(col.total, tenant.currency)}</span>
                   </div>
                 </div>
-                <div>
-                  <div className="text-slate-500">Stocks (Classe 3)</div>
-                  <div className="font-bold text-slate-800">
-                    {formatMoney(
-                      balanceAccounts.filter(a => a.classe === 3).reduce((s, a) => s + a.soldeDebiteur, 0) || 35000000,
-                      tenant.currency
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-slate-500">Créances Clients (4111)</div>
-                  <div className="font-bold text-slate-800">
-                    {formatMoney(
-                      balanceAccounts.find(a => a.code === '4111')?.soldeDebiteur || 0,
-                      tenant.currency
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-slate-500">Trésorerie Actif (Classe 5)</div>
-                  <div className="font-bold text-[#0F5132]">
-                    {formatMoney(
-                      balanceAccounts.filter(a => a.classe === 5).reduce((s, a) => s + a.soldeDebiteur, 0),
-                      tenant.currency
-                    )}
-                  </div>
-                </div>
-              </div>
+              ))}
+            </div>
 
-              {/* PASSIF */}
-              <div className="space-y-3 bg-slate-50 p-3 rounded-lg border border-slate-200">
-                <h4 className="font-bold text-slate-900 border-b border-slate-200 pb-1 uppercase tracking-wider text-[11px]">
-                  PASSIF (Ressources)
-                </h4>
-                <div>
-                  <div className="text-slate-500">Capital Social (101)</div>
-                  <div className="font-bold text-slate-800">
-                    {formatMoney(tenant.capitalSocial, tenant.currency)}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-slate-500">Résultat Net en cours</div>
-                  <div className="font-bold text-emerald-800">
-                    {formatMoney(resultatNetEstime, tenant.currency)}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-slate-500">Dettes Fournisseurs (4011)</div>
-                  <div className="font-bold text-slate-800">
-                    {formatMoney(
-                      balanceAccounts.find(a => a.code === '4011')?.soldeCrediteur || 0,
-                      tenant.currency
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-slate-500">Dettes Fiscales & Sociales (4431, 431)</div>
-                  <div className="font-bold text-slate-800">
-                    {formatMoney(
-                      balanceAccounts.find(a => a.code === '4431')?.soldeCrediteur || 0,
-                      tenant.currency
-                    )}
-                  </div>
-                </div>
-              </div>
+            <div
+              className={`text-[11px] font-semibold px-3 py-2 rounded-lg ${
+                statements.ecart === 0 ? 'bg-emerald-50 text-emerald-800' : 'bg-rose-50 text-rose-800'
+              }`}
+            >
+              {statements.ecart === 0
+                ? 'Bilan équilibré : total actif = total passif.'
+                : `Écart actif − passif : ${formatMoney(statements.ecart, tenant.currency)} — vérifiez les écritures déséquilibrées.`}
             </div>
           </div>
+        </div>
         </div>
       )}
 

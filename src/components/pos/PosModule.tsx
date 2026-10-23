@@ -87,7 +87,10 @@ export function PosModule({ tenant, products, posSessions, userRole }: PosModule
     );
   };
 
-  const handleClearCart = () => setCart([]);
+  const handleClearCart = () => {
+    setCart([]);
+    setDiscountPercent(0);
+  };
 
   const handleCheckoutSubmit = () => {
     if (cart.length === 0 || !currentSession) return;
@@ -342,6 +345,21 @@ export function PosModule({ tenant, products, posSessions, userRole }: PosModule
               <div className="flex justify-between text-slate-500">
                 <span>Sous-total HT :</span>
                 <span>{formatMoney(cartSubtotal, tenant.currency)}</span>
+              </div>
+              <div className="flex items-center justify-between text-slate-500">
+                <label htmlFor="pos-discount">Remise (%) :</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    id="pos-discount"
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={discountPercent}
+                    onChange={e => setDiscountPercent(Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
+                    className="w-16 p-1 border border-slate-300 rounded text-right text-xs"
+                  />
+                  <span>- {formatMoney(cartDiscount, tenant.currency)}</span>
+                </div>
               </div>
               <div className="flex justify-between text-slate-500">
                 <span>TVA estimée :</span>

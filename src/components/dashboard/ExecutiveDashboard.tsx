@@ -4,6 +4,7 @@
  * GSPME - Module A : Tableau de Bord Exécutif Multi-Dimensions (Données Réelles)
  */
 
+import { computePeriod } from '../../services/period';
 import React, { useState } from 'react';
 import {
   TrendingUp,
@@ -68,11 +69,19 @@ export function ExecutiveDashboard({
     i => i.type === 'FACTURE_VENTE' && (selectedBranchId === 'ALL' || i.branchId === selectedBranchId)
   );
 
-  const totalRevenueTTC = salesInvoices.reduce((acc, i) => acc + i.totalTTC, 0);
-  const totalRevenueHT = salesInvoices.reduce((acc, i) => acc + i.subtotalHT, 0);
+  // Période : ancrée sur l'activité la plus récente (mois, trimestre ou exercice en cours de saisie)
+  const period = computePeriod([...salesInvoices.map(i => i.date), ...purchases.map(p => p.date)], periodFilter);
+  const periodLabel = period.label;
+  const inPeriod = period.contains;
 
-  const totalExpensesHT = purchases.reduce((acc, p) => acc + p.totalHT, 0);
-  const totalExpensesTTC = purchases.reduce((acc, p) => acc + p.totalTTC, 0);
+  const periodInvoices = salesInvoices.filter(i => inPeriod(i.date));
+  const periodPurchases = purchases.filter(p => inPeriod(p.date));
+
+  const totalRevenueTTC = periodInvoices.reduce((acc, i) => acc + i.totalTTC, 0);
+  const totalRevenueHT = periodInvoices.reduce((acc, i) => acc + i.subtotalHT, 0);
+
+  const totalExpensesHT = periodPurchases.reduce((acc, p) => acc + p.totalHT, 0);
+  const totalExpensesTTC = periodPurchases.reduce((acc, p) => acc + p.totalTTC, 0);
 
   const operatingResultNet = totalRevenueHT - totalExpensesHT;
 
@@ -124,6 +133,7 @@ export function ExecutiveDashboard({
           </select>
 
           {/* Period selector */}
+          <span className="text-[11px] text-white/80 capitalize" aria-live="polite">{periodLabel}</span>
           <div className="flex bg-black/20 p-1 rounded-lg border border-white/20 text-xs">
             {(['MOIS', 'TRIMESTRE', 'ANNEE'] as const).map(p => (
               <button
@@ -133,7 +143,7 @@ export function ExecutiveDashboard({
                   periodFilter === p ? 'bg-white text-[#0F5132] font-bold' : 'text-white/80 hover:text-white'
                 }`}
               >
-                {p === 'MOIS' ? 'Mois' : p === 'TRIMESTRE' ? 'T1' : 'Exercice'}
+                {p === 'MOIS' ? 'Mois' : p === 'TRIMESTRE' ? 'Trimestre' : 'Exercice'}
               </button>
             ))}
           </div>

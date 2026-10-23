@@ -26,12 +26,16 @@ import {
   ChevronRight,
   ChevronLeft,
   Globe2,
+  ContactRound,
+  Lock,
 } from 'lucide-react';
-import { Tenant } from '../../types';
+import { Role, Tenant } from '../../types';
+import { isModuleAllowed } from '../../../shared/plans';
 
 export type NavModule =
   | 'dashboard'
   | 'crm'
+  | 'contacts'
   | 'sales'
   | 'purchases'
   | 'inventory'
@@ -56,6 +60,8 @@ interface SidebarProps {
   collapsed: boolean;
   onToggleCollapse: () => void;
   onOpenPublicSite?: () => void;
+  /** Rôle de l'utilisateur connecté : l'entrée « Super Admin SaaS » est réservée à SUPER_ADMIN_SAAS. */
+  userRole?: Role;
 }
 
 export function Sidebar({
@@ -65,6 +71,7 @@ export function Sidebar({
   collapsed,
   onToggleCollapse,
   onOpenPublicSite,
+  userRole,
 }: SidebarProps) {
   const navSections = [
     {
@@ -79,6 +86,7 @@ export function Sidebar({
       title: 'Commercial & Relations',
       items: [
         { id: 'crm' as NavModule, label: 'Clients & CRM', icon: Users },
+        { id: 'contacts' as NavModule, label: 'Clients & Fournisseurs', icon: ContactRound },
         { id: 'sales' as NavModule, label: 'Ventes & Facturation', icon: Receipt },
         { id: 'pos' as NavModule, label: 'Caisse & Point de Vente', icon: Store },
         { id: 'purchases' as NavModule, label: 'Achats & Fournisseurs', icon: ShoppingCart },
@@ -112,6 +120,13 @@ export function Sidebar({
     },
   ];
 
+  const visibleSections = navSections
+    .map(section => ({
+      ...section,
+      items: section.items.filter(item => item.id !== 'saas' || userRole === 'SUPER_ADMIN_SAAS'),
+    }))
+    .filter(section => section.items.length > 0);
+
   return (
     <aside
       className={`bg-[#0F5132] text-white flex flex-col justify-between transition-all duration-200 border-r border-[#0F5132]/20 select-none z-40 shrink-0 ${
@@ -126,7 +141,7 @@ export function Sidebar({
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl overflow-hidden bg-white p-0.5 border border-white/20 shadow-xs shrink-0">
                   <img
-                    src="/src/assets/images/gspme_logo.jpg"
+                    src="/gspme_logo.jpg"
                     alt="GSPME-ERP"
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-contain rounded-lg"
@@ -155,7 +170,7 @@ export function Sidebar({
               title="Agrandir la barre latérale"
             >
               <img
-                src="/src/assets/images/gspme_logo.jpg"
+                src="/gspme_logo.jpg"
                 alt="GSPME-ERP"
                 referrerPolicy="no-referrer"
                 className="w-full h-full object-contain rounded-lg"
@@ -166,7 +181,7 @@ export function Sidebar({
 
         {/* Navigation Items Scroll Area */}
         <div className="p-3 space-y-4 overflow-y-auto max-h-[calc(100vh-140px)]">
-          {navSections.map((section, idx) => (
+          {visibleSections.map((section, idx) => (
             <div key={idx} className="space-y-1">
               {!collapsed && (
                 <div className="px-3 text-[10px] font-bold text-white/40 uppercase tracking-wider">
@@ -176,25 +191,30 @@ export function Sidebar({
               {section.items.map(item => {
                 const Icon = item.icon;
                 const isActive = activeModule === item.id;
+                const locked = !isModuleAllowed(tenant.activeModules, item.id);
                 return (
                   <button
                     key={item.id}
                     onClick={() => onSelectModule(item.id)}
-                    title={collapsed ? item.label : undefined}
+                    title={locked ? `${item.label} — non inclus dans votre formule` : collapsed ? item.label : undefined}
                     className={`w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                       isActive
                         ? 'bg-white/15 text-white font-semibold shadow-2xs border-l-3 border-[#D4AF37]'
                         : 'text-white/75 hover:text-white hover:bg-white/8'
-                    } ${collapsed ? 'justify-center px-0' : ''}`}
+                    } ${locked ? 'opacity-55' : ''} ${collapsed ? 'justify-center px-0' : ''}`}
                   >
                     <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#D4AF37]' : item.highlight ? 'text-[#D4AF37]' : 'text-white/70'}`} />
                     {!collapsed && (
                       <span className="truncate flex items-center justify-between w-full">
                         <span>{item.label}</span>
-                        {item.highlight && (
-                          <span className="text-[9px] bg-[#D4AF37]/20 text-[#D4AF37] px-1 rounded font-bold uppercase">
-                            IA
-                          </span>
+                        {locked ? (
+                          <Lock className="w-3 h-3 text-[#D4AF37]" aria-label="Non inclus dans votre formule" />
+                        ) : (
+                          item.highlight && (
+                            <span className="text-[9px] bg-[#D4AF37]/20 text-[#D4AF37] px-1 rounded font-bold uppercase">
+                              IA
+                            </span>
+                          )
                         )}
                       </span>
                     )}
