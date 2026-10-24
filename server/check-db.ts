@@ -3,7 +3,8 @@
  * Affiche les variables reçues (mot de passe masqué) et le message exact de MySQL.
  */
 import 'dotenv/config';
-import { dbConfigHint, envClean, pool } from './db.ts';
+import { dbConfigHint, envClean, pool as initialPool, trySockets } from './db.ts';
+import * as db from './db.ts';
 
 async function main() {
   console.log('Variables reçues par l\'application :');
@@ -15,7 +16,13 @@ async function main() {
   console.log(`  DB_PASSWORD   = ${pwd ? `défini, ${pwd.length} caractères, commence par « ${pwd[0]} » et finit par « ${pwd[pwd.length - 1]} »` : '(ABSENT)'}`);
   console.log('Résumé :', dbConfigHint());
   try {
-    const [rows] = await pool.query('SELECT CURRENT_USER() AS utilisateur, DATABASE() AS base, VERSION() AS version');
+    try {
+      await db.pool.query('SELECT 1');
+    } catch (first) {
+      console.log(`\nConnexion par le réseau refusée (${(first as { code?: string }).code}) : essai des sockets MySQL usuels…`);
+      if (!(await trySockets())) throw first;
+    }
+    const [rows] = await db.pool.query('SELECT CURRENT_USER() AS utilisateur, DATABASE() AS base, VERSION() AS version');
     console.log('\n✔ Connexion réussie :', (rows as unknown[])[0]);
   } catch (err) {
     const e = err as { code?: string; message: string };
@@ -26,7 +33,8 @@ async function main() {
     }
     process.exitCode = 1;
   } finally {
-    await pool.end();
+    await db.pool.end();
+    void initialPool;
   }
 }
 void main();

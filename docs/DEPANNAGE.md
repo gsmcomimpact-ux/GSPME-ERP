@@ -41,6 +41,11 @@ DB_PASSWORD=MotDePasseLettresEtChiffres
 Le serveur le lit au démarrage (puis *Restart*). Protégez-le (permissions 600). Si `localhost` échoue, essayez `DB_HOST=127.0.0.1`.
 Les variables saisies dans l'interface sont, elles, invisibles depuis le Terminal cPanel : `node check-db.js` ne montre donc que le contenu du `.env` et des variables du shell.
 
+## `ER_ACCESS_DENIED_ERROR` alors que les identifiants sont corrects
+Sur cPanel/CloudLinux, Node se connecte à `localhost` **par le réseau**, ce que MySQL peut refuser pour un utilisateur créé « en local » (PHP, lui, passe par un fichier socket). Le serveur essaie désormais **automatiquement** les sockets usuels (`/var/lib/mysql/mysql.sock`, `/tmp/mysql.sock`…) ;
+`dbHint` indique alors « connexion par socket … ». Si votre hébergeur utilise un autre chemin, ajoutez la variable `DB_SOCKET=/chemin/du/socket` (le chemin est visible dans phpMyAdmin → Variables → `socket`).
+Autre essai : `DB_HOST=127.0.0.1`.
+
 ## Pièges de saisie dans cPanel
 - Un **espace invisible** à la fin d'une valeur (copier-coller) : le serveur les retire désormais automatiquement, y compris les guillemets autour.
 - Un mot de passe contenant `& $ # " ' \ espace` peut être déformé par l'interface : utilisez des **lettres et chiffres** (14 caractères ou plus).

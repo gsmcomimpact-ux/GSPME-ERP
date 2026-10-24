@@ -9,6 +9,7 @@
  */
 import mysql, { type Pool, type PoolConnection, type ResultSetHeader } from 'mysql2/promise';
 import { randomBytes } from 'node:crypto';
+import fs from 'node:fs';
 
 /** Dossier de l'application (le bundle CJS expose __dirname ; en dev tsx on retombe sur le cwd). */
 export const APP_DIR = typeof __dirname !== 'undefined' ? __dirname : process.cwd();
@@ -21,11 +22,11 @@ export function envClean(name: string): string {
   return (process.env[name] || '').trim().replace(/^(['"])(.*)\1$/, '$2').trim();
 }
 
-function createPool(): Pool {
+function createPool(socketOverride?: string): Pool {
   const common = { waitForConnections: true, connectionLimit: 10, charset: 'utf8mb4', dateStrings: true } as const;
-  if (envClean('DATABASE_URL')) return mysql.createPool({ uri: envClean('DATABASE_URL'), ...common });
+  if (!socketOverride && envClean('DATABASE_URL')) return mysql.createPool({ uri: envClean('DATABASE_URL'), ...common });
   // Certains hébergeurs n'autorisent la connexion que par socket Unix (DB_SOCKET=/var/lib/mysql/mysql.sock)
-  const socketPath = envClean('DB_SOCKET');
+  const socketPath = socketOverride || envClean('DB_SOCKET');
   return mysql.createPool({
     ...(socketPath ? { socketPath } : { host: envClean('DB_HOST') || 'localhost', port: Number(envClean('DB_PORT')) || 3306 }),
     user: envClean('DB_USER') || 'root',
@@ -35,15 +36,47 @@ function createPool(): Pool {
   });
 }
 
+/** Chemins usuels du socket MySQL/MariaDB sur les hébergements mutualisés et les serveurs Linux. */
+const SOCKET_CANDIDATES = [
+  '/var/lib/mysql/mysql.sock', '/var/lib/mysql/mysqld.sock', '/var/run/mysqld/mysqld.sock',
+  '/run/mysqld/mysqld.sock', '/tmp/mysql.sock', '/var/mysql/mysql.sock',
+];
+let connectionNote = '';
+
 /** Indication de configuration SANS secret (pour le diagnostic) : valeurs masquées, mot de passe oui/non. */
 export function dbConfigHint(): string {
+  const via = connectionNote ? ` · ${connectionNote}` : '';
   const mask = (v: string) => (!v ? '(vide)' : v === 'root' ? 'root' : v.length <= 4 ? v[0] + '***' : v.slice(0, 3) + '***' + v.slice(-1));
   if (envClean('DATABASE_URL')) return 'connexion par DATABASE_URL';
   const named = ['DB_HOST', 'DB_USER', 'DB_PASSWORD', 'DB_NAME'].map(k => `${k}=${envClean(k) ? 'défini' : 'ABSENT'}`).join(', ');
-  return `${named} · utilisateur utilisé : ${mask(envClean('DB_USER') || 'root')} · base : ${mask(envClean('DB_NAME') || 'gspme')} · mot de passe : ${envClean('DB_PASSWORD') ? `oui (${envClean('DB_PASSWORD').length} caractères)` : 'NON'}`;
+  return `${named} · utilisateur utilisé : ${mask(envClean('DB_USER') || 'root')} · base : ${mask(envClean('DB_NAME') || 'gspme')} · mot de passe : ${envClean('DB_PASSWORD') ? `oui (${envClean('DB_PASSWORD').length} caractères)` : 'NON'}${via}`;
 }
 
-export const pool = createPool();
+export let pool: Pool = createPool();
+
+/**
+ * La connexion par le réseau (localhost:3306) est refusée alors que le socket local est souvent autorisé
+ * (cPanel/CloudLinux). On essaie donc les sockets usuels avec les mêmes identifiants.
+ */
+export async function trySockets(): Promise<boolean> {
+  if (envClean('DB_SOCKET') || envClean('DATABASE_URL')) return false;
+  for (const path of SOCKET_CANDIDATES) {
+    if (!fs.existsSync(path)) continue;
+    const candidate = createPool(path);
+    try {
+      await candidate.query('SELECT 1');
+      const old = pool;
+      pool = candidate;
+      connectionNote = `connexion par socket ${path}`;
+      old.end().catch(() => undefined);
+      console.log(`Connexion MySQL établie par le socket ${path}`);
+      return true;
+    } catch {
+      await candidate.end().catch(() => undefined);
+    }
+  }
+  return false;
+}
 
 export async function all<T = Record<string, unknown>>(sql: string, params: SqlParams = [], q: Queryable = pool): Promise<T[]> {
   const [rows] = await q.query(sql, params);
@@ -139,6 +172,11 @@ let jwtSecret = (process.env.JWT_SECRET || '').trim();
 
 /** Crée les tables si besoin et charge le secret JWT (variable d'environnement, sinon généré et conservé en base). */
 export async function initDb(): Promise<void> {
+  try {
+    await run('SELECT 1');
+  } catch (err) {
+    if (!(await trySockets())) throw err; // on garde l'erreur d'origine si aucun socket ne convient
+  }
   for (const stmt of SCHEMA) await run(stmt);
   if (jwtSecret) return;
   const row = await one<{ value: string }>('SELECT `value` FROM meta WHERE `key` = ?', ['jwt_secret']);
