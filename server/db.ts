@@ -58,7 +58,7 @@ export async function transaction<T>(fn: (conn: PoolConnection) => Promise<T>): 
   }
 }
 
-const SCHEMA = [
+export const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS meta (
      \`key\` VARCHAR(64) NOT NULL PRIMARY KEY,
      \`value\` TEXT NOT NULL
