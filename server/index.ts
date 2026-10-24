@@ -7,7 +7,7 @@ import express, { type NextFunction, type Request, type Response } from 'express
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { APP_DIR, all, dbConfigHint, initDb, one, run, transaction } from './db.ts';
+import { APP_DIR, all, dbConfigHint, initDb, maskDbMessage, one, run, socketDiagnostic, transaction } from './db.ts';
 import { adminListPayments, listPayments, runExpiry, startCheckout, webhookHandler } from './billing.ts';
 import { isBillingEnabled } from './chariow.ts';
 import {
@@ -55,6 +55,7 @@ type UserRow = {
 /** État de la base de données : le serveur démarre même si elle est injoignable, et le dit dans /api/health. */
 let dbReady = false;
 let dbErrorCode = '';
+let dbErrorMessage = '';
 const dbErrorOf = (err: unknown) => String((err as { code?: string }).code || (err as Error).message || 'ERREUR').slice(0, 60);
 
 const app = express();
@@ -110,7 +111,7 @@ app.get('/api/health', (_req, res) => {
     status: dbReady ? 'ok' : 'degraded',
     service: 'gspme-saas',
     db: dbReady,
-    ...(dbReady ? {} : { dbError: dbErrorCode || 'INITIALISATION', dbHint: dbConfigHint() }), // codes et valeurs masquées seulement
+    ...(dbReady ? {} : { dbError: dbErrorCode || 'INITIALISATION', dbHint: dbConfigHint(), dbMessage: dbErrorMessage, dbSockets: socketDiagnostic() }), // codes et valeurs masquées seulement
     billing: isBillingEnabled(),
     time: new Date().toISOString(),
   });
@@ -462,9 +463,11 @@ async function bootDb(): Promise<void> {
     await runExpiry();
     dbReady = true;
     dbErrorCode = '';
+    dbErrorMessage = '';
     console.log('Base de données connectée.');
   } catch (err) {
     dbErrorCode = dbErrorOf(err);
+    dbErrorMessage = maskDbMessage((err as Error).message || '');
     console.error(`Base de données indisponible (${dbErrorCode}) : ${(err as Error).message}. Nouvelle tentative dans 10 s.`);
     setTimeout(bootDb, 10_000).unref();
   }

@@ -42,6 +42,7 @@ const SOCKET_CANDIDATES = [
   '/run/mysqld/mysqld.sock', '/tmp/mysql.sock', '/var/mysql/mysql.sock',
 ];
 let connectionNote = '';
+let socketReport = '';
 
 /** Indication de configuration SANS secret (pour le diagnostic) : valeurs masquées, mot de passe oui/non. */
 export function dbConfigHint(): string {
@@ -60,8 +61,10 @@ export let pool: Pool = createPool();
  */
 export async function trySockets(): Promise<boolean> {
   if (envClean('DB_SOCKET') || envClean('DATABASE_URL')) return false;
-  for (const path of SOCKET_CANDIDATES) {
-    if (!fs.existsSync(path)) continue;
+  const found = SOCKET_CANDIDATES.filter(p => fs.existsSync(p));
+  socketReport = found.length ? '' : 'aucun fichier socket MySQL trouvé parmi les chemins usuels (ajoutez DB_SOCKET)';
+  const refused: string[] = [];
+  for (const path of found) {
     const candidate = createPool(path);
     try {
       await candidate.query('SELECT 1');
@@ -71,12 +74,26 @@ export async function trySockets(): Promise<boolean> {
       old.end().catch(() => undefined);
       console.log(`Connexion MySQL établie par le socket ${path}`);
       return true;
-    } catch {
+    } catch (err) {
+      refused.push(`${path} → ${(err as { code?: string }).code || 'erreur'}`);
       await candidate.end().catch(() => undefined);
     }
   }
+  if (refused.length) socketReport = `sockets refusés : ${refused.join(' ; ')}`;
   return false;
 }
+
+/** Message d'erreur MySQL sans donnée sensible : le nom d'utilisateur est masqué (l'hôte vu par MySQL est conservé : il aide au diagnostic). */
+export function maskDbMessage(message: string): string {
+  const user = envClean('DB_USER');
+  const masked = !user ? 'root' : user === 'root' ? 'root' : user.length <= 4 ? user[0] + '***' : user.slice(0, 3) + '***' + user.slice(-1);
+  let out = user ? message.split(user).join(masked) : message;
+  const pwd = envClean('DB_PASSWORD');
+  if (pwd.length >= 4) out = out.split(pwd).join('***');
+  return out.slice(0, 300);
+}
+
+export const socketDiagnostic = () => socketReport;
 
 export async function all<T = Record<string, unknown>>(sql: string, params: SqlParams = [], q: Queryable = pool): Promise<T[]> {
   const [rows] = await q.query(sql, params);
