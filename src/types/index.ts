@@ -51,12 +51,15 @@ export interface Branch {
   isHeadquarters: boolean;
 }
 
+export type InvoiceTemplateId = 'CLASSIQUE' | 'MODERNE' | 'MINIMALISTE' | 'ELEGANT' | 'CORPORATE';
+
 export interface Tenant {
   id: string;
   name: string;
   tradeName?: string;
   legalForm: 'SARL' | 'SAS' | 'SA' | 'SUARL' | 'GIE' | 'ENTREPRISE_INDIVIDUELLE';
   logoUrl?: string; // Logo personnalisé de l'entreprise (Base64 data URL ou URL d'image)
+  invoiceTemplate?: InvoiceTemplateId; // Modèle PDF des factures et devis (défaut : CLASSIQUE)
   countryCode: CountryCode;
   taxNumber: string;
   tradeRegisterNumber: string;

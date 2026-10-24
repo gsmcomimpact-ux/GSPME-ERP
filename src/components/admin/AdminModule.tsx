@@ -28,6 +28,7 @@ import { storage } from '../../services/storage';
 import { api } from '../../services/api';
 import { exportAllData } from '../../services/dataExport';
 import { BillingPanel } from './BillingPanel';
+import { InvoiceTemplatePicker } from './InvoiceTemplatePicker';
 import { subscriptionService } from '../../services/subscriptionService';
 import { PdfService } from '../../services/pdfService';
 
@@ -437,6 +438,14 @@ export function AdminModule({
       )}
 
       {/* TAB: Utilisateurs & RBAC */}
+      {activeTab === 'societe' && (
+        <InvoiceTemplatePicker
+          tenant={tenant}
+          readOnly={currentUser.role === 'AUDITEUR_EXTERNE'}
+          onChanged={name => showToast(`Modèle « ${name} » activé pour vos factures et devis.`)}
+        />
+      )}
+
       {activeTab === 'utilisateurs' && (
         <div className="bg-white rounded-xl border border-slate-200/80 shadow-2xs overflow-hidden">
           <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-xs">

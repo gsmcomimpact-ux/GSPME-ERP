@@ -28,12 +28,14 @@ import {
   Product,
   TreasuryAccount,
   InvoiceItem,
+  InvoiceTemplateId,
   Role,
 } from '../../types';
 import { formatMoney } from '../../services/currency';
 import { Modal, SegmentedTabs, StatusIndicator, EmptyState } from '../common/UIComponents';
 import { createSalesJournalEntry, createPaymentJournalEntry } from '../../services/accountingEngine';
 import { storage } from '../../services/storage';
+import { INVOICE_TEMPLATES } from '../../services/invoiceTemplates';
 import { PdfService } from '../../services/pdfService';
 
 interface SalesModuleProps {
@@ -56,6 +58,8 @@ export function SalesModule({
   searchFilter,
 }: SalesModuleProps) {
   const [activeTab, setActiveTab] = useState<'factures' | 'devis' | 'clients'>('factures');
+  // Modèle PDF des factures et devis (par défaut : celui choisi dans les Paramètres)
+  const [pdfTemplate, setPdfTemplate] = useState<InvoiceTemplateId>(tenant.invoiceTemplate || 'CLASSIQUE');
   const [selectedInvoiceForPrint, setSelectedInvoiceForPrint] = useState<Invoice | null>(null);
   const [selectedInvoiceForPay, setSelectedInvoiceForPay] = useState<Invoice | null>(null);
 
@@ -330,6 +334,20 @@ export function SalesModule({
         </div>
       </div>
 
+      <div className="flex items-center justify-end gap-2 text-xs text-slate-600 -mb-2">
+        <label htmlFor="pdf-template" className="font-semibold">Modèle PDF des factures et devis :</label>
+        <select
+          id="pdf-template"
+          value={pdfTemplate}
+          onChange={e => setPdfTemplate(e.target.value as InvoiceTemplateId)}
+          className="p-1.5 border border-slate-300 rounded-lg bg-white text-xs"
+        >
+          {INVOICE_TEMPLATES.map(t => (
+            <option key={t.id} value={t.id}>{t.name}</option>
+          ))}
+        </select>
+      </div>
+
       {/* Tabs */}
       <SegmentedTabs
         tabs={[
@@ -410,7 +428,7 @@ export function SalesModule({
                             </button>
                           )}
                           <button
-                            onClick={() => PdfService.downloadInvoicePdf(inv, tenant)}
+                            onClick={() => PdfService.downloadInvoicePdf(inv, tenant, pdfTemplate)}
                             className="p-1.5 text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 rounded transition-colors cursor-pointer"
                             title="Télécharger la Facture PDF"
                           >
@@ -483,7 +501,7 @@ export function SalesModule({
                           <ArrowRight className="w-3 h-3" />
                         </button>
                         <button
-                          onClick={() => PdfService.downloadInvoicePdf(quote, tenant)}
+                          onClick={() => PdfService.downloadInvoicePdf(quote, tenant, pdfTemplate)}
                           className="p-1 text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 rounded cursor-pointer transition-colors"
                           title="Télécharger le Devis PDF"
                         >
@@ -1023,7 +1041,7 @@ export function SalesModule({
                 Fermer
               </button>
               <button
-                onClick={() => PdfService.downloadInvoicePdf(selectedInvoiceForPrint, tenant)}
+                onClick={() => PdfService.downloadInvoicePdf(selectedInvoiceForPrint, tenant, pdfTemplate)}
                 className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold rounded-lg flex items-center gap-2 cursor-pointer shadow-xs transition-colors"
                 title="Générer et télécharger le document PDF vectoriel conforme OHADA"
               >

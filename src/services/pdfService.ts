@@ -5,201 +5,27 @@
  */
 
 import { jsPDF } from 'jspdf';
-import { Invoice, Payslip, PosReceipt, SubscriptionOrder, StoredDocument, Tenant } from '../types';
+import { Invoice, InvoiceTemplateId, Payslip, PosReceipt, SubscriptionOrder, StoredDocument, Tenant } from '../types';
+import { fileNameFor, renderInvoicePdf } from './invoiceTemplates';
 import { formatMoney } from './currency';
 import type { FinancialStatements, StatementSection } from './financialStatements';
 
 export class PdfService {
   /**
-   * Génère et télécharge une Facture ou un Devis au format PDF professionnel
+   * Génère et télécharge une facture, un devis, un avoir ou un bon de commande (modèle choisi dans les Paramètres,
+   * ou `templateId` pour forcer un modèle précis).
    */
-  public static downloadInvoicePdf(invoice: Invoice, tenant: Tenant) {
-    const doc = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4',
-    });
+  public static async downloadInvoicePdf(invoice: Invoice, tenant: Tenant, templateId?: InvoiceTemplateId): Promise<void> {
+    const doc = await renderInvoicePdf(invoice, tenant, { templateId });
+    doc.save(fileNameFor(invoice));
+  }
 
-    const isQuote = invoice.type === 'DEVIS_PROFORMA';
-    const isCredit = invoice.type === 'AVOIR_CLIENT';
-    const isOrder = invoice.type === 'BON_COMMANDE';
-    const docTitle = isQuote ? 'DEVIS PROFORMA' : isCredit ? 'AVOIR CLIENT' : isOrder ? 'BON DE COMMANDE' : 'FACTURE DE VENTE';
-
-    // 1. En-tête Entreprise (Gauche)
-    doc.setFillColor(15, 81, 50); // #0F5132 Vert émeraude
-    doc.rect(0, 0, 210, 8, 'F'); // Bande supérieure décorative
-
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(16);
-    doc.setTextColor(15, 81, 50);
-    doc.text(tenant.name.toUpperCase(), 14, 22);
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8.5);
-    doc.setTextColor(71, 85, 105);
-    doc.text(`Forme Juridique : ${tenant.legalForm} · RCCM : ${tenant.tradeRegisterNumber}`, 14, 27);
-    doc.text(`NIF / NCC : ${tenant.taxNumber} · Siège : ${tenant.city}, ${tenant.countryCode}`, 14, 32);
-    doc.text(`Adresse : ${tenant.address}`, 14, 37);
-    doc.text(`Téléphone : ${tenant.phone} · Email : ${tenant.email}`, 14, 42);
-
-    // 2. Bloc Titre & Numéro Document (Droite)
-    doc.setFillColor(241, 245, 249);
-    doc.roundedRect(125, 16, 71, 30, 2, 2, 'F');
-
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(13);
-    doc.setTextColor(15, 81, 50);
-    doc.text(docTitle, 130, 24);
-
-    doc.setFontSize(9);
-    doc.setTextColor(15, 23, 42);
-    doc.text(`N° : ${invoice.number}`, 130, 31);
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8.5);
-    doc.setTextColor(71, 85, 105);
-    doc.text(`Date d'émission : ${invoice.date}`, 130, 37);
-    doc.text(`Échéance : ${invoice.dueDate}`, 130, 42);
-
-    // 3. Cadre Client
-    doc.setDrawColor(226, 232, 240);
-    doc.setFillColor(255, 255, 255);
-    doc.roundedRect(14, 50, 182, 26, 2, 2, 'FD');
-
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8.5);
-    doc.setTextColor(15, 81, 50);
-    doc.text('FACTURÉ À / CLIENT :', 20, 56);
-
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
-    doc.setTextColor(15, 23, 42);
-    doc.text(invoice.customerName, 20, 62);
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.setTextColor(71, 85, 105);
-    if (invoice.customerTaxNumber) {
-      doc.text(`NIF/NCC Client : ${invoice.customerTaxNumber}`, 20, 68);
-    } else {
-      doc.text(`Compte Client ID : ${invoice.customerId}`, 20, 68);
-    }
-    doc.text(`Statut règlement : ${invoice.status}`, 120, 62);
-    doc.text(`Mode de règlement : ${invoice.paymentMethod || 'Mobile Money / Virement'}`, 120, 68);
-
-    // 4. Tableau des Articles
-    let currentY = 84;
-    doc.setFillColor(15, 81, 50);
-    doc.rect(14, currentY, 182, 8, 'F');
-
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.setTextColor(255, 255, 255);
-    doc.text('Désignation des Articles / Prestations', 18, currentY + 5.5);
-    doc.text('Qté', 115, currentY + 5.5, { align: 'center' });
-    doc.text('Prix Unit. HT', 140, currentY + 5.5, { align: 'right' });
-    doc.text('TVA', 160, currentY + 5.5, { align: 'right' });
-    doc.text('Total HT', 190, currentY + 5.5, { align: 'right' });
-
-    currentY += 8;
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.setTextColor(30, 41, 59);
-
-    invoice.items.forEach((item, index) => {
-      // Fond alterné
-      if (index % 2 === 1) {
-        doc.setFillColor(248, 250, 252);
-        doc.rect(14, currentY, 182, 7.5, 'F');
-      }
-
-      // Ligne de séparation
-      doc.setDrawColor(241, 245, 249);
-      doc.line(14, currentY + 7.5, 196, currentY + 7.5);
-
-      const desc = item.description.length > 55 ? item.description.substring(0, 52) + '...' : item.description;
-      doc.text(desc, 18, currentY + 5);
-      doc.text(item.quantity.toString(), 115, currentY + 5, { align: 'center' });
-      doc.text(formatMoney(item.unitPriceHT, invoice.currency), 140, currentY + 5, { align: 'right' });
-      doc.text(`${item.vatRate}%`, 160, currentY + 5, { align: 'right' });
-      doc.text(formatMoney(item.totalHT, invoice.currency), 190, currentY + 5, { align: 'right' });
-
-      currentY += 7.5;
-    });
-
-    currentY += 6;
-
-    // 5. Bloc Totaux & Récapitulatif Fiscal
-    const totalsBoxY = currentY;
-    const totalsBoxWidth = 85;
-    const totalsBoxX = 111;
-
-    doc.setFillColor(248, 250, 252);
-    doc.roundedRect(totalsBoxX, totalsBoxY, totalsBoxWidth, 38, 2, 2, 'F');
-    doc.setDrawColor(226, 232, 240);
-    doc.roundedRect(totalsBoxX, totalsBoxY, totalsBoxWidth, 38, 2, 2, 'D');
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8.5);
-    doc.setTextColor(71, 85, 105);
-
-    doc.text('Sous-total Brut HT :', totalsBoxX + 6, totalsBoxY + 7);
-    doc.text(formatMoney(invoice.subtotalHT, invoice.currency), totalsBoxX + totalsBoxWidth - 6, totalsBoxY + 7, { align: 'right' });
-
-    if (invoice.discountAmount > 0) {
-      doc.text('Remise commerciale :', totalsBoxX + 6, totalsBoxY + 13);
-      doc.text(`-${formatMoney(invoice.discountAmount, invoice.currency)}`, totalsBoxX + totalsBoxWidth - 6, totalsBoxY + 13, { align: 'right' });
-    }
-
-    doc.text('Total TVA :', totalsBoxX + 6, totalsBoxY + 19);
-    doc.text(formatMoney(invoice.totalVAT, invoice.currency), totalsBoxX + totalsBoxWidth - 6, totalsBoxY + 19, { align: 'right' });
-
-    doc.setDrawColor(203, 213, 225);
-    doc.line(totalsBoxX + 4, totalsBoxY + 23, totalsBoxX + totalsBoxWidth - 4, totalsBoxY + 23);
-
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
-    doc.setTextColor(15, 81, 50);
-    doc.text('TOTAL NET TTC :', totalsBoxX + 6, totalsBoxY + 29);
-    doc.text(formatMoney(invoice.totalTTC, invoice.currency), totalsBoxX + totalsBoxWidth - 6, totalsBoxY + 29, { align: 'right' });
-
-    doc.setFontSize(8);
-    doc.setTextColor(15, 23, 42);
-    doc.text('Reste à Régler :', totalsBoxX + 6, totalsBoxY + 34.5);
-    doc.text(formatMoney(invoice.remainingAmount, invoice.currency), totalsBoxX + totalsBoxWidth - 6, totalsBoxY + 34.5, { align: 'right' });
-
-    // 6. Arrêté de Facture en toutes lettres & Mention OHADA
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.setTextColor(71, 85, 105);
-    doc.text(`Arrêtée la présente facture à la somme TTC de : ${formatMoney(invoice.totalTTC, invoice.currency)}.`, 14, totalsBoxY + 8);
-    doc.text('Dispensé de timbre fiscal en application du Code Général des Impôts.', 14, totalsBoxY + 14);
-    doc.text('Paiements acceptés : Wave, Orange Money, MTN MoMo, Chèque ou Virement bancaire.', 14, totalsBoxY + 20);
-
-    // 7. Cachet & Signature
-    const signatureY = totalsBoxY + 45;
-    doc.setDrawColor(203, 213, 225);
-    doc.roundedRect(125, signatureY, 71, 26, 2, 2, 'D');
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.setTextColor(71, 85, 105);
-    doc.text('Pour Acquit et Signature Autorisée', 130, signatureY + 6);
-    doc.setFont('helvetica', 'italic');
-    doc.setFontSize(7.5);
-    doc.setTextColor(148, 163, 184);
-    doc.text('Cachet commercial & Direction', 130, signatureY + 12);
-
-    // 8. Pied de page
-    doc.setFillColor(241, 245, 249);
-    doc.rect(0, 285, 210, 12, 'F');
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.5);
-    doc.setTextColor(100, 116, 139);
-    doc.text(`GSPME ERP Cloud · Conforme aux normes SYSCOHADA Révisé · Document N° ${invoice.number} généré le ${new Date().toLocaleDateString('fr-FR')}`, 105, 292, { align: 'center' });
-
-    // Sauvegarde
-    doc.save(`${docTitle.replace(/\s+/g, '_')}_${invoice.number}.pdf`);
+  /** Ouvre l'aperçu d'un document dans un nouvel onglet (sans le télécharger). */
+  public static async previewInvoicePdf(invoice: Invoice, tenant: Tenant, templateId?: InvoiceTemplateId): Promise<void> {
+    const doc = await renderInvoicePdf(invoice, tenant, { templateId });
+    const url = URL.createObjectURL(doc.output('blob'));
+    window.open(url, '_blank', 'noopener');
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
   }
 
   /**
