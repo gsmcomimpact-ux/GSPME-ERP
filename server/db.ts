@@ -23,7 +23,7 @@ export function envClean(name: string): string {
 }
 
 function createPool(socketOverride?: string): Pool {
-  const common = { waitForConnections: true, connectionLimit: 10, charset: 'utf8mb4', dateStrings: true } as const;
+  const common = { waitForConnections: true, connectionLimit: 10, charset: 'utf8mb4', dateStrings: true, connectTimeout: 8000 } as const;
   if (!socketOverride && envClean('DATABASE_URL')) return mysql.createPool({ uri: envClean('DATABASE_URL'), ...common });
   // Certains hébergeurs n'autorisent la connexion que par socket Unix (DB_SOCKET=/var/lib/mysql/mysql.sock)
   const socketPath = socketOverride || envClean('DB_SOCKET');

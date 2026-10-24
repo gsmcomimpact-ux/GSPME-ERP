@@ -54,8 +54,8 @@ type UserRow = {
 
 /** État de la base de données : le serveur démarre même si elle est injoignable, et le dit dans /api/health. */
 let dbReady = false;
-let dbErrorCode = '';
-let dbErrorMessage = '';
+let dbErrorCode = 'DEMARRAGE_EN_COURS'; // remplacé par un vrai code dès le premier échec
+let dbErrorMessage = 'Connexion à la base en cours… rechargez dans quelques secondes.';
 const dbErrorOf = (err: unknown) => String((err as { code?: string }).code || (err as Error).message || 'ERREUR').slice(0, 60);
 
 const app = express();
@@ -458,9 +458,11 @@ export { app };
 /** Initialise la base ; en cas d'échec on réessaie toutes les 10 s sans arrêter le serveur. */
 async function bootDb(): Promise<void> {
   try {
-    await initDb();
-    await seedSuperAdmin();
-    await runExpiry();
+    // Garde-fou : une base qui ne répond jamais ne doit pas laisser le serveur dans un état flou
+    const guard = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(Object.assign(new Error('La base de données ne répond pas (délai dépassé).'), { code: 'DELAI_DEPASSE' })), 30_000).unref();
+    });
+    await Promise.race([initDb().then(seedSuperAdmin).then(() => runExpiry()), guard]);
     dbReady = true;
     dbErrorCode = '';
     dbErrorMessage = '';
