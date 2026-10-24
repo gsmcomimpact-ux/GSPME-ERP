@@ -16,15 +16,20 @@ export const APP_DIR = typeof __dirname !== 'undefined' ? __dirname : process.cw
 export type SqlParams = (string | number | null)[];
 type Queryable = Pick<Pool, 'query'> | Pick<PoolConnection, 'query'>;
 
+/** Lit une variable d'environnement en retirant espaces et guillemets parasites (copier-coller dans cPanel). */
+export function envClean(name: string): string {
+  return (process.env[name] || '').trim().replace(/^(['"])(.*)\1$/, '$2').trim();
+}
+
 function createPool(): Pool {
   const common = { waitForConnections: true, connectionLimit: 10, charset: 'utf8mb4', dateStrings: true } as const;
-  if (process.env.DATABASE_URL) return mysql.createPool({ uri: process.env.DATABASE_URL, ...common });
+  if (envClean('DATABASE_URL')) return mysql.createPool({ uri: envClean('DATABASE_URL'), ...common });
   return mysql.createPool({
-    host: process.env.DB_HOST || 'localhost',
-    port: Number(process.env.DB_PORT) || 3306,
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'gspme',
+    host: envClean('DB_HOST') || 'localhost',
+    port: Number(envClean('DB_PORT')) || 3306,
+    user: envClean('DB_USER') || 'root',
+    password: envClean('DB_PASSWORD'),
+    database: envClean('DB_NAME') || 'gspme',
     ...common,
   });
 }
@@ -121,7 +126,7 @@ export const SCHEMA = [
    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
 ];
 
-let jwtSecret = process.env.JWT_SECRET || '';
+let jwtSecret = (process.env.JWT_SECRET || '').trim();
 
 /** Crée les tables si besoin et charge le secret JWT (variable d'environnement, sinon généré et conservé en base). */
 export async function initDb(): Promise<void> {

@@ -6,10 +6,10 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import { type Cycle, type PaidPlanId } from '../shared/plans.ts';
 
 export const chariowConfig = () => ({
-  apiUrl: (process.env.CHARIOW_API_URL || 'https://api.chariow.com/v1').replace(/\/+$/, ''),
-  apiKey: process.env.CHARIOW_API_KEY || '',
-  webhookSecret: process.env.CHARIOW_WEBHOOK_SECRET || '',
-  appUrl: (process.env.APP_URL || '').replace(/\/+$/, ''),
+  apiUrl: (process.env.CHARIOW_API_URL || 'https://api.chariow.com/v1').trim().replace(/\/+$/, ''),
+  apiKey: (process.env.CHARIOW_API_KEY || '').trim(),
+  webhookSecret: (process.env.CHARIOW_WEBHOOK_SECRET || '').trim(),
+  appUrl: (process.env.APP_URL || '').trim().replace(/\/+$/, ''),
 });
 
 /** Identifiant Chariow (prd_…) du produit « Licence » correspondant à une formule et un cycle. */

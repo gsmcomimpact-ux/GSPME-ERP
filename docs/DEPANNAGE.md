@@ -21,6 +21,11 @@ Ce message s'affiche sur la page d'accueil quand le site n'obtient pas de répon
 | `ER_DBACCESS_DENIED_ERROR` | L'utilisateur existe mais n'a pas les droits sur cette base |
 | `PROTOCOL_CONNECTION_LOST` | Connexion coupée par l'hébergeur : *Restart* |
 
+## Pièges de saisie dans cPanel
+- Un **espace invisible** à la fin d'une valeur (copier-coller) : le serveur les retire désormais automatiquement, y compris les guillemets autour.
+- Un mot de passe contenant `& $ # " ' \ espace` peut être déformé par l'interface : utilisez des **lettres et chiffres** (14 caractères ou plus).
+- **Ne partagez jamais** un mot de passe ou une clé dans un message : en cas de fuite, changez-le immédiatement.
+
 ## Vérifications rapides
 1. *Setup Node.js App* : statut **Running**, version **20**, startup file **`server.js`**.
 2. Onglet des **variables d'environnement** : `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` renseignés **sans espace ni guillemets**.
