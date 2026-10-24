@@ -7,7 +7,7 @@ import express, { type NextFunction, type Request, type Response } from 'express
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { APP_DIR, all, initDb, one, run, transaction } from './db.ts';
+import { APP_DIR, all, dbConfigHint, initDb, one, run, transaction } from './db.ts';
 import { adminListPayments, listPayments, runExpiry, startCheckout, webhookHandler } from './billing.ts';
 import { isBillingEnabled } from './chariow.ts';
 import {
@@ -110,7 +110,7 @@ app.get('/api/health', (_req, res) => {
     status: dbReady ? 'ok' : 'degraded',
     service: 'gspme-saas',
     db: dbReady,
-    ...(dbReady ? {} : { dbError: dbErrorCode || 'INITIALISATION' }), // code technique seulement (aucun mot de passe ni hôte)
+    ...(dbReady ? {} : { dbError: dbErrorCode || 'INITIALISATION', dbHint: dbConfigHint() }), // codes et valeurs masquées seulement
     billing: isBillingEnabled(),
     time: new Date().toISOString(),
   });

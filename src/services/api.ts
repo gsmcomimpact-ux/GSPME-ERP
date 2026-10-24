@@ -121,12 +121,12 @@ class ApiClient {
   }
 
   /** État du serveur : joignable ? base de données connectée ? (sinon : mode démo local) */
-  public async serverStatus(): Promise<{ reachable: boolean; db: boolean; dbError?: string }> {
+  public async serverStatus(): Promise<{ reachable: boolean; db: boolean; dbError?: string; dbHint?: string }> {
     try {
       const res = await fetch('/api/health');
       const data = await res.json();
       if (data?.service !== 'gspme-saas') return { reachable: false, db: false };
-      return { reachable: true, db: data.db !== false, dbError: data.dbError };
+      return { reachable: true, db: data.db !== false, dbError: data.dbError, dbHint: data.dbHint };
     } catch {
       return { reachable: false, db: false };
     }

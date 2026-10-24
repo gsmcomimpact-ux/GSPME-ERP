@@ -21,6 +21,26 @@ Ce message s'affiche sur la page d'accueil quand le site n'obtient pas de répon
 | `ER_DBACCESS_DENIED_ERROR` | L'utilisateur existe mais n'a pas les droits sur cette base |
 | `PROTOCOL_CONNECTION_LOST` | Connexion coupée par l'hébergeur : *Restart* |
 
+## Si `ER_ACCESS_DENIED_ERROR` persiste
+Depuis cette version, `/api/health` affiche une ligne `dbHint` qui montre **ce que l'application reçoit réellement** (valeurs masquées) :
+`DB_USER=défini … utilisateur utilisé : yet***m · mot de passe : oui (12 caractères)`.
+
+| Ce que dit `dbHint` | Cause | Solution |
+|---|---|---|
+| `DB_USER=ABSENT` / « utilisateur utilisé : root » / « mot de passe : NON » | Les variables **n'arrivent pas** à l'application (non enregistrées, ou pas de *Restart*) | Dans *Setup Node.js App*, ajoutez les variables puis **Save**, puis *Restart*. Ou utilisez un fichier `.env` (voir plus bas) |
+| Utilisateur et mot de passe « définis » mais l'erreur reste | MySQL refuse bien ce couple | Mot de passe inexact (le longueur affichée doit correspondre à la vôtre), ou **utilisateur non associé à la base** : *MySQL Databases* → « Ajouter un utilisateur à une base de données » → tous les privilèges |
+| Longueur du mot de passe ≠ celle que vous avez choisie | Un caractère spécial a été déformé | Choisissez un mot de passe en lettres et chiffres uniquement |
+
+**Alternative fiable : un fichier `.env`.** Créez dans le dossier de l'application (`~/gspme/.env`) un fichier contenant, une valeur par ligne et sans guillemets :
+```
+DB_HOST=localhost
+DB_NAME=monid_nombase
+DB_USER=monid_utilisateur
+DB_PASSWORD=MotDePasseLettresEtChiffres
+```
+Le serveur le lit au démarrage (puis *Restart*). Protégez-le (permissions 600). Si `localhost` échoue, essayez `DB_HOST=127.0.0.1`.
+Les variables saisies dans l'interface sont, elles, invisibles depuis le Terminal cPanel : `node check-db.js` ne montre donc que le contenu du `.env` et des variables du shell.
+
 ## Pièges de saisie dans cPanel
 - Un **espace invisible** à la fin d'une valeur (copier-coller) : le serveur les retire désormais automatiquement, y compris les guillemets autour.
 - Un mot de passe contenant `& $ # " ' \ espace` peut être déformé par l'interface : utilisez des **lettres et chiffres** (14 caractères ou plus).

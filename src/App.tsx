@@ -168,7 +168,7 @@ export default function App() {
       const status = await api.serverStatus();
       const available = status.reachable && status.db;
       setServerAvailable(available);
-      setServerIssue(status.reachable && !status.db ? `base de données non connectée (${status.dbError || 'erreur'})` : '');
+      setServerIssue(status.reachable && !status.db ? `base de données non connectée (${status.dbError || 'erreur'}${status.dbHint ? ' — ' + status.dbHint : ''})` : '');
       if (available && api.isEnabled()) {
         try {
           const snapshot = await api.fetchSnapshot();

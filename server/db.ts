@@ -24,14 +24,23 @@ export function envClean(name: string): string {
 function createPool(): Pool {
   const common = { waitForConnections: true, connectionLimit: 10, charset: 'utf8mb4', dateStrings: true } as const;
   if (envClean('DATABASE_URL')) return mysql.createPool({ uri: envClean('DATABASE_URL'), ...common });
+  // Certains hébergeurs n'autorisent la connexion que par socket Unix (DB_SOCKET=/var/lib/mysql/mysql.sock)
+  const socketPath = envClean('DB_SOCKET');
   return mysql.createPool({
-    host: envClean('DB_HOST') || 'localhost',
-    port: Number(envClean('DB_PORT')) || 3306,
+    ...(socketPath ? { socketPath } : { host: envClean('DB_HOST') || 'localhost', port: Number(envClean('DB_PORT')) || 3306 }),
     user: envClean('DB_USER') || 'root',
     password: envClean('DB_PASSWORD'),
     database: envClean('DB_NAME') || 'gspme',
     ...common,
   });
+}
+
+/** Indication de configuration SANS secret (pour le diagnostic) : valeurs masquées, mot de passe oui/non. */
+export function dbConfigHint(): string {
+  const mask = (v: string) => (!v ? '(vide)' : v === 'root' ? 'root' : v.length <= 4 ? v[0] + '***' : v.slice(0, 3) + '***' + v.slice(-1));
+  if (envClean('DATABASE_URL')) return 'connexion par DATABASE_URL';
+  const named = ['DB_HOST', 'DB_USER', 'DB_PASSWORD', 'DB_NAME'].map(k => `${k}=${envClean(k) ? 'défini' : 'ABSENT'}`).join(', ');
+  return `${named} · utilisateur utilisé : ${mask(envClean('DB_USER') || 'root')} · base : ${mask(envClean('DB_NAME') || 'gspme')} · mot de passe : ${envClean('DB_PASSWORD') ? `oui (${envClean('DB_PASSWORD').length} caractères)` : 'NON'}`;
 }
 
 export const pool = createPool();
