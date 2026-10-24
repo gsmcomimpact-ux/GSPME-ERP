@@ -120,15 +120,22 @@ class ApiClient {
     return (await this.request<{ payments: (Payment & { tenantName: string; email: string })[] }>('GET', '/admin/payments')).payments;
   }
 
-  /** Le serveur SaaS répond-il ? (sinon : mode démo local) */
-  public async isServerAvailable(): Promise<boolean> {
+  /** État du serveur : joignable ? base de données connectée ? (sinon : mode démo local) */
+  public async serverStatus(): Promise<{ reachable: boolean; db: boolean; dbError?: string }> {
     try {
       const res = await fetch('/api/health');
       const data = await res.json();
-      return res.ok && data?.service === 'gspme-saas';
+      if (data?.service !== 'gspme-saas') return { reachable: false, db: false };
+      return { reachable: true, db: data.db !== false, dbError: data.dbError };
     } catch {
-      return false;
+      return { reachable: false, db: false };
     }
+  }
+
+  /** Le serveur SaaS répond-il et sa base est-elle prête ? */
+  public async isServerAvailable(): Promise<boolean> {
+    const s = await this.serverStatus();
+    return s.reachable && s.db;
   }
 
   public async login(email: string, password: string): Promise<void> {

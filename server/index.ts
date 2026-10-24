@@ -52,9 +52,20 @@ type UserRow = {
   role: string; active: number; last_login: string | null;
 };
 
+/** État de la base de données : le serveur démarre même si elle est injoignable, et le dit dans /api/health. */
+let dbReady = false;
+let dbErrorCode = '';
+const dbErrorOf = (err: unknown) => String((err as { code?: string }).code || (err as Error).message || 'ERREUR').slice(0, 60);
+
 const app = express();
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
+// Tant que la base n'est pas prête, toute l'API répond 503 (sauf /api/health) : Chariow réessaiera ses webhooks
+app.use('/api', (req, res, next) => {
+  if (dbReady || req.path === '/health') return next();
+  res.status(503).json({ error: 'Base de données indisponible : réessayez dans un instant.' });
+});
+
 // Webhook Chariow : corps BRUT (la signature porte sur les octets exacts), donc avant express.json()
 app.post('/api/webhooks/chariow', express.raw({ type: '*/*', limit: '1mb' }), webhookHandler);
 app.use(express.json({ limit: '10mb' }));
@@ -95,7 +106,14 @@ const SUSPENDED_MSG = 'Abonnement suspendu : contactez le support GSPME.';
 
 // ---------------------------------------------------------------- Santé
 app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', service: 'gspme-saas', billing: isBillingEnabled(), time: new Date().toISOString() });
+  res.json({
+    status: dbReady ? 'ok' : 'degraded',
+    service: 'gspme-saas',
+    db: dbReady,
+    ...(dbReady ? {} : { dbError: dbErrorCode || 'INITIALISATION' }), // code technique seulement (aucun mot de passe ni hôte)
+    billing: isBillingEnabled(),
+    time: new Date().toISOString(),
+  });
 });
 
 // ---------------------------------------------------------------- Auth
@@ -431,21 +449,30 @@ async function seedSuperAdmin() {
   console.log(`Super-admin créé : ${email}`);
 }
 
-/** Prêt quand les tables existent (les tests attendent cette promesse). */
-export const ready = initDb();
+/** Tests : prête quand les tables existent. En production le démarrage passe par bootDb(). */
+export const ready: Promise<void> =
+  process.env.GSPME_NO_LISTEN === '1' ? initDb().then(() => { dbReady = true; }) : Promise.resolve();
 export { app };
 
+/** Initialise la base ; en cas d'échec on réessaie toutes les 10 s sans arrêter le serveur. */
+async function bootDb(): Promise<void> {
+  try {
+    await initDb();
+    await seedSuperAdmin();
+    await runExpiry();
+    dbReady = true;
+    dbErrorCode = '';
+    console.log('Base de données connectée.');
+  } catch (err) {
+    dbErrorCode = dbErrorOf(err);
+    console.error(`Base de données indisponible (${dbErrorCode}) : ${(err as Error).message}. Nouvelle tentative dans 10 s.`);
+    setTimeout(bootDb, 10_000).unref();
+  }
+}
+
 if (process.env.GSPME_NO_LISTEN !== '1') {
-  ready
-    .then(seedSuperAdmin)
-    .then(() => runExpiry())
-    .then(() => {
-      setInterval(() => runExpiry().catch(err => console.error('Échéances :', err.message)), 6 * 3600_000).unref();
-      const port = Number(process.env.PORT) || 3001;
-      app.listen(port, () => console.log(`GSPME SaaS API sur http://localhost:${port}`));
-    })
-    .catch(err => {
-      console.error('Démarrage impossible (base de données ?) :', err.message);
-      process.exit(1);
-    });
+  const port = Number(process.env.PORT) || 3001;
+  app.listen(port, () => console.log(`GSPME SaaS API sur http://localhost:${port}`));
+  setInterval(() => { if (dbReady) runExpiry().catch(err => console.error('Échéances :', err.message)); }, 6 * 3600_000).unref();
+  void bootDb();
 }

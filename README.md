@@ -48,6 +48,8 @@ limites d'utilisateurs sont, elles, contrôlées par le serveur.
 Les CSV utilisent `;` et l'UTF-8 avec BOM (ouverture directe dans Excel) ; chaque export est tracé dans le journal d'audit.
 Les états sont calculés à partir des écritures **validées** ; ils ne remplacent pas des états certifiés.
 
+Dépannage de l'hébergement : `docs/DEPANNAGE.md`.
+
 ## Sécurité
 Isolation stricte par tenant (le `tenantId` vient du jeton, jamais du client), champs d'abonnement
 modifiables uniquement par `SUPER_ADMIN_SAAS`, `AUDITEUR_EXTERNE` en lecture seule.

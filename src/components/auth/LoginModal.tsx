@@ -13,6 +13,8 @@ interface LoginModalProps {
   /** Appelé une fois la session ouverte et les données chargées. */
   onAuthenticated: (role: string) => void;
   serverAvailable: boolean;
+  /** Raison précise quand le serveur répond mais qu'un composant (base de données) est en panne. */
+  serverIssue?: string;
   initialMode?: 'login' | 'register';
   notice?: string;
   /** Formule choisie sur la page d'accueil (transmise à l'inscription). */
@@ -25,7 +27,7 @@ const COUNTRIES: [string, string][] = [
 ];
 const input = 'w-full p-2.5 border border-slate-300 rounded-lg text-xs focus:outline-none focus:border-[#0F5132] focus:ring-1 focus:ring-[#0F5132]';
 
-export function LoginModal({ isOpen, onClose, onAuthenticated, serverAvailable, initialMode = 'login', notice, requestedPlan }: LoginModalProps) {
+export function LoginModal({ isOpen, onClose, onAuthenticated, serverAvailable, serverIssue, initialMode = 'login', notice, requestedPlan }: LoginModalProps) {
   const [mode, setMode] = useState<'login' | 'register'>(initialMode);
   const [f, setF] = useState({ companyName: '', name: '', email: '', password: '', countryCode: 'SN', city: '', phone: '' });
   const [showPwd, setShowPwd] = useState(false);
@@ -84,7 +86,10 @@ export function LoginModal({ isOpen, onClose, onAuthenticated, serverAvailable, 
           {notice && <div className="px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 font-semibold">{notice}</div>}
           {!serverAvailable && (
             <div className="px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-800">
-              Le serveur de connexion est injoignable pour le moment. Vous pouvez tester l'ERP avec le bouton « Accéder à l'ERP (Démo) ».
+              {serverIssue
+                ? `Le serveur est en ligne mais sa ${serverIssue}. L'administrateur doit vérifier la configuration. `
+                : 'Le serveur de connexion est injoignable pour le moment. '}
+              Vous pouvez tester l'ERP avec le bouton « Accéder à l'ERP (Démo) ».
             </div>
           )}
 

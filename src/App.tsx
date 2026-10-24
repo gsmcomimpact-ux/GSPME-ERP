@@ -81,6 +81,7 @@ export default function App() {
   // Session serveur (connexion email / mot de passe) — sinon mode démo local
   const [serverMode, setServerMode] = useState(api.isEnabled());
   const [serverAvailable, setServerAvailable] = useState(true);
+  const [serverIssue, setServerIssue] = useState('');
   const [booting, setBooting] = useState(api.isEnabled());
   const [loginOpen, setLoginOpen] = useState(false);
   const [loginMode, setLoginMode] = useState<'login' | 'register'>('login');
@@ -164,8 +165,10 @@ export default function App() {
   useEffect(() => {
     api.setUnauthorizedHandler(() => closeSession('Votre session a expiré, veuillez vous reconnecter.'));
     (async () => {
-      const available = await api.isServerAvailable();
+      const status = await api.serverStatus();
+      const available = status.reachable && status.db;
       setServerAvailable(available);
+      setServerIssue(status.reachable && !status.db ? `base de données non connectée (${status.dbError || 'erreur'})` : '');
       if (available && api.isEnabled()) {
         try {
           const snapshot = await api.fetchSnapshot();
@@ -289,6 +292,7 @@ export default function App() {
           onClose={() => setLoginOpen(false)}
           onAuthenticated={handleAuthenticated}
           serverAvailable={serverAvailable}
+          serverIssue={serverIssue}
           initialMode={loginMode}
           notice={loginNotice}
           requestedPlan={pendingPlan}
