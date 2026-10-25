@@ -477,14 +477,21 @@ export interface StoredDocument {
   id: string;
   tenantId: string;
   title: string;
-  category: 'CONTRAT' | 'JUSTIFICATIF_FISCAL' | 'FACTURE_SIGNEE' | 'PLAN_TECHNIQUE' | 'STATUTS_SOCIETE';
-  fileType: 'PDF' | 'IMAGE' | 'EXCEL' | 'DOC';
+  category: 'CONTRAT' | 'JUSTIFICATIF_FISCAL' | 'FACTURE_SIGNEE' | 'PLAN_TECHNIQUE' | 'STATUTS_SOCIETE' | 'AUTRE';
+  fileType: 'PDF' | 'IMAGE' | 'EXCEL' | 'DOC' | 'AUTRE';
   sizeKB: number;
   uploadedAt: string;
   uploadedBy: string;
   relatedEntity?: string; // Ex: "FAC-2026-0041"
   securityLevel: 'PUBLIC_ENTREPRISE' | 'CONFIDENTIEL_DAF' | 'DIRECTION_SEULEMENT';
   downloadUrl?: string;
+  /** Fichier archivé (absent pour les fiches de démonstration). */
+  fileId?: string;
+  fileName?: string;
+  mime?: string;
+  /** Empreinte SHA-256 du fichier au moment du dépôt (preuve d'intégrité). */
+  sha256?: string;
+  uploadedById?: string;
 }
 
 // MODULE N — Rapports BI

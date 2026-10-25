@@ -39,7 +39,7 @@ const { app, ready } = await import('./index.ts');
 const { run } = await import('./db.ts');
 await ready;
 await run('SET FOREIGN_KEY_CHECKS = 0');
-for (const t of ['webhook_events', 'payments', 'inquiries', 'records', 'users', 'tenants']) await run(`TRUNCATE TABLE ${t}`);
+for (const t of ['webhook_events', 'payments', 'inquiries', 'files', 'records', 'users', 'tenants']) await run(`TRUNCATE TABLE ${t}`);
 await run('SET FOREIGN_KEY_CHECKS = 1');
 const server = app.listen(0);
 const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api`;
@@ -405,4 +405,121 @@ test('paiements : liste globale réservée au super-admin', async () => {
   const list = (await call('GET', '/admin/payments', undefined, sa)).body.payments;
   assert.ok(list.length > 3);
   assert.ok(list.every((p: any) => p.tenantName && p.status));
+});
+
+// ------------------------------------------------------------------ Archivage de fichiers (GED)
+const PDF = Buffer.from('%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n');
+const PNG = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(64, 1)]);
+const upload = async (token: string, name: string, body: Buffer | string, level = 'PUBLIC_ENTREPRISE') => {
+  const res = await fetch(base + '/files', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/octet-stream', 'x-file-name': encodeURIComponent(name), 'x-security-level': level },
+    body: body as any,
+  });
+  return { status: res.status, body: (await res.json()) as any };
+};
+const getFile = async (token: string | undefined, id: string, query = '') => {
+  const res = await fetch(`${base}/files/${id}${query}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  return { status: res.status, headers: res.headers, buf: Buffer.from(await res.arrayBuffer()) };
+};
+
+test('GED : dépôt, empreinte, téléchargement et en-têtes de sécurité', async () => {
+  const { token } = await registerCI('ged1');
+  const up = await upload(token, 'Contrat client é.pdf', PDF);
+  assert.equal(up.status, 201);
+  assert.equal(up.body.size, PDF.length);
+  assert.equal(up.body.mime, 'application/pdf');
+  const { createHash } = await import('node:crypto');
+  assert.equal(up.body.sha256, createHash('sha256').update(PDF).digest('hex'));
+
+  const dl = await getFile(token, up.body.id);
+  assert.equal(dl.status, 200);
+  assert.deepEqual(dl.buf, PDF);
+  assert.match(dl.headers.get('content-disposition') || '', /^attachment; filename\*=UTF-8''Contrat%20client%20%C3%A9\.pdf/);
+  assert.equal(dl.headers.get('x-content-type-options'), 'nosniff');
+  assert.match(dl.headers.get('content-security-policy') || '', /sandbox/);
+  const inline = await getFile(token, up.body.id, '?inline=1');
+  assert.match(inline.headers.get('content-disposition') || '', /^inline/);
+
+  assert.equal((await getFile(undefined, up.body.id)).status, 401);
+  assert.equal((await getFile(token, 'file-inexistant')).status, 404);
+  const usage = (await call('GET', '/files-usage', undefined, token)).body;
+  assert.equal(usage.usedBytes, PDF.length);
+  assert.equal(usage.count, 1);
+});
+
+test('GED : types et contenus refusés', async () => {
+  const { token } = await registerCI('ged2');
+  assert.equal((await upload(token, 'virus.exe', Buffer.from('MZ....'))).status, 400);
+  assert.equal((await upload(token, 'page.html', Buffer.from('<script>alert(1)</script>'))).status, 400);
+  assert.equal((await upload(token, 'logo.svg', Buffer.from('<svg onload=alert(1)/>'))).status, 400);
+  assert.equal((await upload(token, 'faux.pdf', Buffer.from('MZ ceci est un exécutable'))).status, 400); // extension ≠ contenu
+  assert.equal((await upload(token, 'binaire.txt', Buffer.from([0x68, 0x00, 0x69]))).status, 400);
+  assert.equal((await upload(token, 'vide.pdf', Buffer.alloc(0))).status, 400);
+  assert.equal((await upload(token, 'photo.png', PNG)).status, 201);
+  assert.equal((await upload(token, 'notes.txt', 'Compte rendu de réunion')).status, 201);
+  // trop gros : 8 Mo + 1
+  const big = Buffer.concat([PDF, Buffer.alloc(8 * 1024 * 1024)]);
+  assert.equal((await upload(token, 'enorme.pdf', big)).status, 413);
+  assert.equal((await upload(token, 'x.pdf', PDF, 'NIVEAU_INCONNU')).status, 400);
+});
+
+test('GED : isolation entre entreprises et niveaux de confidentialité par rôle', async () => {
+  const a = await registerCI('ged3a');
+  const b = await registerCI('ged3b');
+  const secret = await upload(a.token, 'salaires.pdf', PDF, 'DIRECTION_SEULEMENT');
+  const daf = await upload(a.token, 'bilan.pdf', PDF, 'CONFIDENTIEL_DAF');
+  const pub = await upload(a.token, 'reglement.pdf', PDF, 'PUBLIC_ENTREPRISE');
+  assert.equal(secret.status, 201);
+
+  // une autre entreprise ne voit rien
+  assert.equal((await getFile(b.token, pub.body.id)).status, 404);
+  assert.equal((await call('DELETE', `/files/${pub.body.id}`, undefined, b.token)).status, 404);
+
+  // collaborateurs de l'entreprise A
+  const mk = async (email: string, role: string) => {
+    await call('POST', '/users', { name: role, email, password: 'motdepasse1', role }, a.token);
+    return (await call('POST', '/auth/login', { email, password: 'motdepasse1' })).body.token as string;
+  };
+  const commercial = await mk('com@ged3a.sn', 'COMMERCIAL_VENTES');
+  const financier = await mk('daf@ged3a.sn', 'RESPONSABLE_FINANCIER');
+  const auditeur = await mk('aud@ged3a.sn', 'AUDITEUR_EXTERNE');
+
+  assert.equal((await getFile(commercial, pub.body.id)).status, 200);
+  assert.equal((await getFile(commercial, daf.body.id)).status, 403);
+  assert.equal((await getFile(commercial, secret.body.id)).status, 403);
+  assert.equal((await getFile(financier, daf.body.id)).status, 200);
+  assert.equal((await getFile(financier, secret.body.id)).status, 403);
+  assert.equal((await getFile(auditeur, daf.body.id)).status, 200);
+  assert.equal((await getFile(auditeur, secret.body.id)).status, 403);
+  assert.equal((await getFile(a.token, secret.body.id)).status, 200);
+
+  // dépôt : pas au-dessus de son niveau ; auditeur en lecture seule
+  assert.equal((await upload(commercial, 'x.pdf', PDF, 'DIRECTION_SEULEMENT')).status, 403);
+  assert.equal((await upload(commercial, 'ok.pdf', PDF)).status, 201);
+  assert.equal((await upload(auditeur, 'x.pdf', PDF)).status, 403);
+  assert.equal((await call('DELETE', `/files/${pub.body.id}`, undefined, auditeur)).status, 403);
+
+  // suppression : l'auteur ou la direction seulement
+  assert.equal((await call('DELETE', `/files/${pub.body.id}`, undefined, commercial)).status, 403, 'un collaborateur ne supprime pas le dépôt de la direction');
+  const mine = await upload(commercial, 'mien.pdf', PDF);
+  assert.equal((await call('DELETE', `/files/${mine.body.id}`, undefined, commercial)).status, 200);
+  assert.equal((await getFile(commercial, mine.body.id)).status, 404);
+  assert.equal((await call('DELETE', `/files/${pub.body.id}`, undefined, a.token)).status, 200);
+});
+
+test('GED : quota de stockage de la formule', async () => {
+  const { token, tid } = await registerCI('ged4');
+  const { run: sql } = await import('./db.ts');
+  const t = await tenantOf(token);
+  // quota artificiel de ~1 Mo
+  await sql('UPDATE tenants SET data = ? WHERE id = ?', [JSON.stringify({ ...t, maxStorageMB: 1 }), tid]);
+  const half = Buffer.concat([PDF, Buffer.alloc(600 * 1024)]);
+  assert.equal((await upload(token, 'a.pdf', half)).status, 201);
+  const refused = await upload(token, 'b.pdf', half);
+  assert.equal(refused.status, 413);
+  assert.match(refused.body.error, /stockage|Espace/i);
+  const usage = (await call('GET', '/files-usage', undefined, token)).body;
+  assert.equal(usage.quotaBytes, 1024 * 1024);
+  assert.ok(usage.usedBytes > 600 * 1024);
 });

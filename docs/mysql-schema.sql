@@ -5,7 +5,7 @@
 --
 -- Tables : meta (secret de session) · tenants (entreprises clientes) · users (comptes, mots de passe hachés)
 --          inquiries (demandes de contact du site) · payments (paiements d'abonnement Chariow)
---          webhook_events (anti-doublon des webhooks) · records (données métier par entreprise)
+--          webhook_events (anti-doublon des webhooks) · files (fichiers archivés de la GED) · records (données métier par entreprise)
 
 CREATE TABLE IF NOT EXISTS meta (
   `key` VARCHAR(64) NOT NULL PRIMARY KEY,
@@ -62,6 +62,22 @@ CREATE TABLE IF NOT EXISTS webhook_events (
   delivery_id VARCHAR(100) NOT NULL PRIMARY KEY,
   event VARCHAR(50) NOT NULL,
   received_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS files (
+  id VARCHAR(64) NOT NULL PRIMARY KEY,
+  tenant_id VARCHAR(64) NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  mime VARCHAR(100) NOT NULL,
+  size INT NOT NULL,
+  sha256 CHAR(64) NOT NULL,
+  security_level VARCHAR(30) NOT NULL DEFAULT 'PUBLIC_ENTREPRISE',
+  uploaded_by_id VARCHAR(64) NOT NULL,
+  uploaded_by VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  data LONGBLOB NOT NULL,
+  KEY idx_files_tenant (tenant_id),
+  CONSTRAINT fk_files_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id)
    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS records (

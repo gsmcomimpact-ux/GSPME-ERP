@@ -547,7 +547,8 @@ export default function App() {
             <DocumentsModule
               tenant={tenant}
               documents={documents}
-              userRole={currentUser.role}
+              currentUser={currentUser}
+              serverMode={serverMode}
               searchFilter={globalSearch}
             />
           )}

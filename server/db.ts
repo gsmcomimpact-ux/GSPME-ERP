@@ -14,7 +14,7 @@ import fs from 'node:fs';
 /** Dossier de l'application (le bundle CJS expose __dirname ; en dev tsx on retombe sur le cwd). */
 export const APP_DIR = typeof __dirname !== 'undefined' ? __dirname : process.cwd();
 
-export type SqlParams = (string | number | null)[];
+export type SqlParams = (string | number | null | Buffer)[];
 type Queryable = Pick<Pool, 'query'> | Pick<PoolConnection, 'query'>;
 
 /** Lit une variable d'environnement en retirant espaces et guillemets parasites (copier-coller dans cPanel). */
@@ -173,6 +173,21 @@ export const SCHEMA = [
      delivery_id VARCHAR(100) NOT NULL PRIMARY KEY,
      event VARCHAR(50) NOT NULL,
      received_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  `CREATE TABLE IF NOT EXISTS files (
+     id VARCHAR(64) NOT NULL PRIMARY KEY,
+     tenant_id VARCHAR(64) NOT NULL,
+     name VARCHAR(255) NOT NULL,
+     mime VARCHAR(100) NOT NULL,
+     size INT NOT NULL,
+     sha256 CHAR(64) NOT NULL,
+     security_level VARCHAR(30) NOT NULL DEFAULT 'PUBLIC_ENTREPRISE',
+     uploaded_by_id VARCHAR(64) NOT NULL,
+     uploaded_by VARCHAR(255) NOT NULL,
+     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+     data LONGBLOB NOT NULL,
+     KEY idx_files_tenant (tenant_id),
+     CONSTRAINT fk_files_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id)
    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
   `CREATE TABLE IF NOT EXISTS records (
      tenant_id VARCHAR(64) NOT NULL,

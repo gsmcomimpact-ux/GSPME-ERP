@@ -58,4 +58,9 @@ Autre essai : `DB_HOST=127.0.0.1`.
 4. Les fichiers `server.js`, `package.json` et `dist/` sont **directement** dans le dossier de l'application (pas dans un sous-dossier du ZIP).
 5. Après chaque modification des variables : **Restart**.
 
+## Dépôt de documents (GED) refusé
+- « Fichier trop volumineux » : limite de **8 Mo** par fichier (et quota total selon la formule).
+- Erreur à l'envoi d'un gros fichier alors qu'il fait moins de 8 Mo : l'hébergeur limite peut-être la taille des requêtes ou `max_allowed_packet` MySQL (il doit être ≥ 16 Mo ; demandez-le au support iFastNet).
+- Les fichiers sont stockés **dans la base MySQL** : pensez à sauvegarder la base régulièrement.
+
 En attendant, le bouton « Accéder à l'ERP (Démo) » fonctionne sans serveur (données fictives, non enregistrées).

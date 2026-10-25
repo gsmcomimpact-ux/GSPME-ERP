@@ -25,6 +25,15 @@ export interface Payment {
   paidAt: string | null;
 }
 
+export interface UploadedFile {
+  id: string;
+  name: string;
+  mime: string;
+  size: number;
+  sha256: string;
+  securityLevel: string;
+}
+
 export interface SyncSnapshot {
   activeTenantId: string;
   activeUserId: string;
@@ -179,6 +188,38 @@ class ApiClient {
 
   public setInquiryStatus(id: string, status: SupportInquiry['status']) {
     return this.request<{ ok: boolean }>('PATCH', `/admin/inquiries/${encodeURIComponent(id)}`, { status });
+  }
+
+  // ---- Archivage de fichiers (GED)
+  private async fileRequest(path: string, init: RequestInit = {}): Promise<Response> {
+    const res = await fetch(`/api${path}`, { ...init, headers: { ...(init.headers || {}), ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}) } });
+    if (!res.ok) {
+      if (res.status === 401 && this.token) { this.logout(); this.onUnauthorized?.(); }
+      const data = await res.json().catch(() => ({}));
+      throw new Error((data as { error?: string }).error || `Erreur ${res.status}`);
+    }
+    return res;
+  }
+
+  public async uploadFile(file: File, securityLevel: string): Promise<UploadedFile> {
+    const res = await this.fileRequest('/files', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/octet-stream', 'x-file-name': encodeURIComponent(file.name), 'x-security-level': securityLevel },
+      body: file,
+    });
+    return res.json();
+  }
+
+  public async downloadFile(id: string, inline = false): Promise<Blob> {
+    return (await this.fileRequest(`/files/${encodeURIComponent(id)}${inline ? '?inline=1' : ''}`)).blob();
+  }
+
+  public async deleteFile(id: string): Promise<void> {
+    await this.fileRequest(`/files/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  }
+
+  public async filesUsage(): Promise<{ usedBytes: number; quotaBytes: number; count: number; maxFileBytes: number }> {
+    return (await this.fileRequest('/files-usage')).json();
   }
 
   /** Répercute une collection locale vers le serveur (regroupe les écritures rapprochées). */

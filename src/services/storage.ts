@@ -362,6 +362,14 @@ export class SaaSStorageService {
     return all.filter(d => d.tenantId === targetId);
   }
 
+  public removeDocument(id: string): void {
+    const all = getFromStorage(STORAGE_KEYS.DOCUMENTS, INITIAL_DOCUMENTS);
+    const doc = all.find(d => d.id === id);
+    saveToStorage(STORAGE_KEYS.DOCUMENTS, all.filter(d => d.id !== id));
+    this.logAudit('SUPPRESSION', 'DOCUMENTS', `Suppression du document : ${doc?.title || id}`);
+    this.notify();
+  }
+
   public addDocument(doc: StoredDocument): void {
     const all = getFromStorage(STORAGE_KEYS.DOCUMENTS, INITIAL_DOCUMENTS);
     saveToStorage(STORAGE_KEYS.DOCUMENTS, [doc, ...all]);

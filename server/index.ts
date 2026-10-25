@@ -10,6 +10,8 @@ import path from 'node:path';
 import { APP_DIR, all, dbConfigHint, initDb, maskDbMessage, one, run, socketDiagnostic, transaction } from './db.ts';
 import { adminListPayments, listPayments, runExpiry, startCheckout, webhookHandler } from './billing.ts';
 import { isBillingEnabled } from './chariow.ts';
+import { deleteFile, downloadFile, filesUsage, uploadFile } from './files.ts';
+import { MAX_FILE_BYTES } from '../shared/documents.ts';
 import {
   type AuthedRequest,
   hashPassword,
@@ -410,6 +412,13 @@ app.patch('/api/admin/inquiries/:id', superGuard, asyncH(async (req, res) => {
   res.json({ ok: true });
 }));
 
+// ---------------------------------------------------------------- Archivage de fichiers (GED)
+const uploadLimiter = rateLimit(120, 15 * 60 * 1000);
+app.post('/api/files', uploadLimiter, requireAuth, express.raw({ type: 'application/octet-stream', limit: MAX_FILE_BYTES + 1024 }), asyncH(uploadFile));
+app.get('/api/files-usage', requireAuth, asyncH(filesUsage));
+app.get('/api/files/:id', requireAuth, asyncH(downloadFile));
+app.delete('/api/files/:id', requireAuth, asyncH(deleteFile));
+
 // ---------------------------------------------------------------- Paiement des abonnements (Chariow)
 const billingLimiter = rateLimit(15, 15 * 60 * 1000);
 app.post('/api/billing/checkout', billingLimiter, requireAuth, asyncH(startCheckout));
@@ -425,6 +434,9 @@ if (fs.existsSync(dist)) {
 
 app.use('/api', (_req, res) => { res.status(404).json({ error: 'Route inconnue' }); });
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  const status = (err as { status?: number }).status;
+  if (status === 413) { res.status(413).json({ error: 'Fichier trop volumineux (8 Mo maximum).' }); return; }
+  if (status && status >= 400 && status < 500) { res.status(status).json({ error: 'Requête invalide' }); return; }
   console.error(err);
   res.status(500).json({ error: 'Erreur interne du serveur' });
 });

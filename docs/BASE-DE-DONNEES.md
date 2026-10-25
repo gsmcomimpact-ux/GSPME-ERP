@@ -3,7 +3,7 @@
 Schéma complet : `docs/mysql-schema.sql` (importable dans phpMyAdmin). Le serveur crée les tables tout seul au démarrage.
 Variables de connexion : `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` (ou `DATABASE_URL`).
 
-## Les 7 tables
+## Les 8 tables
 
 | Table | Contenu | Clé |
 |---|---|---|
@@ -11,6 +11,7 @@ Variables de connexion : `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAM
 | `users` | **Comptes** de connexion : nom, email (unique), mot de passe **haché** (scrypt), rôle, actif, dernière connexion | `id` · `tenant_id` → `tenants` |
 | `records` | **Toutes les données métier** de chaque entreprise (clients, factures, stocks, paie, écritures…), une ligne par enregistrement, en JSON | `(tenant_id, collection, id)` |
 | `payments` | **Paiements d'abonnement** Chariow : formule, cycle, montant, statut (`PENDING`, `PAID`, `FAILED`, `ABANDONED`, `REVIEW`), identifiant de vente Chariow | `id` · `chariow_sale_id` unique |
+| `files` | **Fichiers archivés** de la GED (contenu binaire `LONGBLOB`, nom, type, taille, empreinte SHA-256, niveau de confidentialité, déposant). 8 Mo max par fichier, quota par formule | `id` · `tenant_id` |
 | `webhook_events` | Identifiants des livraisons Chariow déjà traitées (anti-doublon) | `delivery_id` |
 | `inquiries` | **Demandes de contact** reçues depuis le site (JSON) et leur statut (`NOUVEAU`, `EN_COURS`, `TRAITE`) | `id` |
 | `meta` | Paramètres internes (secret de signature des sessions si `JWT_SECRET` n'est pas défini) | `key` |
