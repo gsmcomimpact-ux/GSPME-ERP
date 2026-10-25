@@ -185,34 +185,16 @@ export function LandingPage({ onSelectPlanToSubscribe, onEnterDemoApp, onOpenLog
               Fonctionnalités
             </button>
             <button
-              onClick={() => scrollToSection('avantages')}
-              className="hover:text-[#0F5132] transition-colors cursor-pointer py-1"
-            >
-              Avantages Afrique
-            </button>
-            <button
               onClick={() => scrollToSection('tarifs')}
               className="hover:text-[#0F5132] transition-colors cursor-pointer py-1 font-bold text-slate-900"
             >
               Tarifs & Offres
             </button>
             <button
-              onClick={() => scrollToSection('comparatif')}
-              className="hover:text-[#0F5132] transition-colors cursor-pointer py-1"
-            >
-              Comparatif
-            </button>
-            <button
               onClick={() => scrollToSection('faq')}
               className="hover:text-[#0F5132] transition-colors cursor-pointer py-1"
             >
               FAQ
-            </button>
-            <button
-              onClick={() => scrollToSection('contact')}
-              className="hover:text-[#0F5132] transition-colors cursor-pointer py-1"
-            >
-              Support & Contact
             </button>
           </nav>
 
@@ -243,14 +225,6 @@ export function LandingPage({ onSelectPlanToSubscribe, onEnterDemoApp, onOpenLog
                 >
                   <Lock className="w-3.5 h-3.5" />
                   <span>Connexion</span>
-                </button>
-                <button
-                  onClick={onEnterDemoApp}
-                  className="hidden md:flex px-3 sm:px-3.5 py-2 text-xs font-bold text-[#0F5132] hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer items-center gap-1.5"
-                  title="Tester l'ERP en direct avec données démo"
-                >
-                  <span>Accéder à l'ERP (Démo)</span>
-                  <ExternalLink className="w-3.5 h-3.5 opacity-70" />
                 </button>
               </>
             )}
@@ -284,34 +258,16 @@ export function LandingPage({ onSelectPlanToSubscribe, onEnterDemoApp, onOpenLog
               Fonctionnalités & Modules
             </button>
             <button
-              onClick={() => scrollToSection('avantages')}
-              className="w-full text-left py-2 px-3 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#0F5132]"
-            >
-              Avantages Afrique & OHADA
-            </button>
-            <button
               onClick={() => scrollToSection('tarifs')}
               className="w-full text-left py-2 px-3 rounded-lg text-xs font-bold text-[#0F5132] bg-emerald-50/60"
             >
               Tarifs (Gratuit, 5k, 7.5k, 10k FR CFA)
             </button>
             <button
-              onClick={() => scrollToSection('comparatif')}
-              className="w-full text-left py-2 px-3 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#0F5132]"
-            >
-              Matrice Comparative des Formules
-            </button>
-            <button
               onClick={() => scrollToSection('faq')}
               className="w-full text-left py-2 px-3 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#0F5132]"
             >
               Foire Aux Questions (FAQ)
-            </button>
-            <button
-              onClick={() => scrollToSection('contact')}
-              className="w-full text-left py-2 px-3 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#0F5132]"
-            >
-              Support Régional & Contact
             </button>
             <div className="pt-2 border-t border-slate-100 flex flex-col gap-2">
               {session ? (
@@ -338,13 +294,6 @@ export function LandingPage({ onSelectPlanToSubscribe, onEnterDemoApp, onOpenLog
                   >
                     <Lock className="w-3.5 h-3.5" />
                     <span>Connexion / Espace Entreprise</span>
-                  </button>
-                  <button
-                    onClick={() => { setMobileMenuOpen(false); onEnterDemoApp(); }}
-                    className="w-full py-2.5 border border-[#0F5132]/30 text-[#0F5132] rounded-lg text-xs font-bold flex items-center justify-center gap-2"
-                  >
-                    <span>Accéder à l'ERP (Démo)</span>
-                    <ExternalLink className="w-3.5 h-3.5" />
                   </button>
                 </>
               )}
