@@ -27,6 +27,7 @@ const fakeChariow = http.createServer((req, res) => {
 });
 await new Promise<void>(r => fakeChariow.listen(0, '127.0.0.1', r));
 process.env.CHARIOW_API_URL = `http://127.0.0.1:${(fakeChariow.address() as AddressInfo).port}/v1`;
+process.env.CHARIOW_NO_DEFAULTS = '1';
 process.env.CHARIOW_API_KEY = 'sk_test_key';
 process.env.CHARIOW_WEBHOOK_SECRET = 'whsec_test_secret';
 process.env.APP_URL = 'https://gspme.example';
