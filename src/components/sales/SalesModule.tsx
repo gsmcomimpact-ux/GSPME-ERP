@@ -634,6 +634,7 @@ export function SalesModule({
 
           {/* Line Items Table */}
           <div className="border border-slate-200 rounded-lg overflow-hidden">
+            <datalist id="vat-suggestions"><option value="0" /><option value="5" /><option value="9" /><option value="18" /><option value="19.25" /></datalist>
             <table className="w-full text-left">
               <thead className="bg-slate-50 border-b border-slate-200 text-slate-600">
                 <tr>
@@ -709,22 +710,27 @@ export function SalesModule({
                       />
                     </td>
                     <td className="p-2 text-center">
-                      <select
-                        value={item.vatRate}
-                        onChange={e =>
-                          handleItemQtyPriceChange(
-                            index,
-                            item.quantity,
-                            item.unitPriceHT,
-                            parseFloat(e.target.value) || 0
-                          )
-                        }
-                        className="p-1.5 border border-slate-200 rounded text-xs bg-white"
-                      >
-                        <option value="18">18% (UEMOA)</option>
-                        <option value="19.25">19.25% (CEMAC)</option>
-                        <option value="0">0% (Exonéré)</option>
-                      </select>
+                      <div className="flex items-center justify-center gap-1">
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.01"
+                          list="vat-suggestions"
+                          aria-label="Taux de TVA (%)"
+                          value={item.vatRate}
+                          onChange={e =>
+                            handleItemQtyPriceChange(
+                              index,
+                              item.quantity,
+                              item.unitPriceHT,
+                              Math.min(100, Math.max(0, parseFloat(e.target.value) || 0))
+                            )
+                          }
+                          className="w-16 p-1.5 border border-slate-200 rounded text-center text-xs"
+                        />
+                        <span className="text-xs text-slate-500">%</span>
+                      </div>
                     </td>
                     <td className="p-2 text-right font-semibold text-slate-800">
                       {formatMoney(item.totalHT, tenant.currency)}

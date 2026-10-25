@@ -419,15 +419,20 @@ export function PurchasesModule({
             </div>
             <div>
               <label className="block font-semibold text-slate-700 mb-1">Taux TVA Déductible</label>
-              <select
-                value={vatRate}
-                onChange={e => setVatRate(parseFloat(e.target.value) || 0)}
-                className="w-full p-2 border border-slate-300 rounded-lg bg-white"
-              >
-                <option value="18">18% (UEMOA)</option>
-                <option value="19.25">19.25% (CEMAC)</option>
-                <option value="0">0% (Exonéré / Non applicable)</option>
-              </select>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  list="vat-suggestions-purchase"
+                  value={vatRate}
+                  onChange={e => setVatRate(Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
+                  className="w-full p-2 border border-slate-300 rounded-lg bg-white"
+                />
+                <span className="text-slate-500">%</span>
+                <datalist id="vat-suggestions-purchase"><option value="0" /><option value="5" /><option value="9" /><option value="18" /><option value="19.25" /></datalist>
+              </div>
             </div>
           </div>
 
