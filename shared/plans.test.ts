@@ -37,7 +37,6 @@ test('modules autorisés par formule', () => {
   assert.equal(isModuleAllowed([], 'accounting'), true);
   assert.equal(minPlanForModule('inventory')?.id, 'ESSENTIEL');
   assert.equal(minPlanForModule('accounting')?.id, 'BUSINESS');
-  assert.equal(minPlanForModule('ai')?.id, 'PREMIUM');
   assert.equal(minPlanForModule('sales')?.id, 'STARTER');
   assert.equal(minPlanForModule('inconnu'), null);
 });

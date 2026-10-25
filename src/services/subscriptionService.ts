@@ -130,7 +130,6 @@ export const DEFAULT_PLANS: SubscriptionPlanConfig[] = [
       'projects',
       'documents',
       'bi',
-      'ai',
     ],
     features: [
       'Jusqu’à 50 utilisateurs & multi-établissements illimités',
@@ -139,7 +138,6 @@ export const DEFAULT_PLANS: SubscriptionPlanConfig[] = [
       'Gestion des Immobilisations & tableau d’amortissement',
       'GED complète (Gestion Électronique des Documents)',
       'Rapports décisionnels avancés & BI comparative',
-      'Assistant IA GSPME (détection d’anomalies & trésorerie)',
       'Sauvegardes certifiées horaires & isolation dédiée',
       'Accompagnement personnalisé & Account Manager dédié 24/7',
     ],

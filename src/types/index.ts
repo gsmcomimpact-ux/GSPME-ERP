@@ -520,18 +520,6 @@ export interface BiReportMetrics {
   inventoryTurnoverRatio: number;
 }
 
-// MODULE O — IA Assistant Insights
-export interface AiInsight {
-  id: string;
-  timestamp: string;
-  type: 'ANOMALIE_TRESORERIE' | 'OPPORTUNITE_MARGE' | 'PREVISION_DECAISSEMENT' | 'ALERTE_RECOUVREMENT';
-  severity: 'INFO' | 'ATTENTION' | 'CRITIQUE';
-  title: string;
-  analysis: string;
-  recommendedAction: string;
-  sourceDataReference: string;
-}
-
 // MODULE P — Plateforme Super Admin
 export interface PlatformMetric {
   totalTenantsCount: number;

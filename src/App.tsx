@@ -36,7 +36,6 @@ import {
   Project,
   FixedAsset,
   StoredDocument,
-  AiInsight,
 } from './types';
 import { Navbar } from './components/layout/Navbar';
 import { Sidebar, NavModule } from './components/layout/Sidebar';
@@ -54,7 +53,6 @@ import { ProjectsModule } from './components/projects/ProjectsModule';
 import { FixedAssetsModule } from './components/assets/FixedAssetsModule';
 import { DocumentsModule } from './components/documents/DocumentsModule';
 import { BiReportsModule } from './components/bi/BiReportsModule';
-import { AiAssistantModule } from './components/ai/AiAssistantModule';
 import { TaxModule } from './components/tax/TaxModule';
 import { QualityTestsModule } from './components/testing/QualityTestsModule';
 import { AdminModule } from './components/admin/AdminModule';
@@ -70,7 +68,7 @@ const MODULE_LABELS: Record<string, string> = {
   crm: 'Clients & CRM', sales: 'Ventes & Facturation', pos: 'Caisse & Point de Vente', purchases: 'Achats & Fournisseurs',
   inventory: 'Stocks & Entrepôts', accounting: 'Comptabilité SYSCOHADA', treasury: 'Trésorerie & Caisses', tax: 'Fiscalité & Taxes',
   payroll: 'Paie & Ressources Humaines', assets: 'Immobilisations', projects: 'Gestion de Projets', documents: 'Documents & GED',
-  bi: 'Rapports & Analytics', ai: 'Assistant IA GSPME',
+  bi: 'Rapports & Analytics',
 };
 
 export default function App() {
@@ -129,7 +127,6 @@ export default function App() {
   const [projects, setProjects] = useState<Project[]>(storage.getProjects());
   const [fixedAssets, setFixedAssets] = useState<FixedAsset[]>(storage.getFixedAssets());
   const [documents, setDocuments] = useState<StoredDocument[]>(storage.getDocuments());
-  const [aiInsights, setAiInsights] = useState<AiInsight[]>(storage.getAiInsights());
 
   const reloadData = () => {
     const currentTenant = storage.getActiveTenant();
@@ -155,7 +152,6 @@ export default function App() {
     setProjects(storage.getProjects(currentTenant.id));
     setFixedAssets(storage.getFixedAssets(currentTenant.id));
     setDocuments(storage.getDocuments(currentTenant.id));
-    setAiInsights(storage.getAiInsights());
   };
 
   useEffect(() => {
@@ -568,21 +564,6 @@ export default function App() {
               products={products}
               treasuryAccounts={treasuryAccounts}
               customers={customers}
-              userRole={currentUser.role}
-            />
-          )}
-
-          {moduleAllowed && activeModule === 'ai' && (
-            <AiAssistantModule
-              tenant={tenant}
-              invoices={invoices}
-              purchases={purchases}
-              products={products}
-              treasuryAccounts={treasuryAccounts}
-              customers={customers}
-              projects={projects}
-              salesOrders={salesOrders}
-              serverMode={serverMode}
               userRole={currentUser.role}
             />
           )}

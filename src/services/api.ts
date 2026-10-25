@@ -9,7 +9,7 @@ const SYNCED_KEYS = new Set([
   'tenants', 'users', 'customers', 'suppliers', 'products', 'warehouses', 'invoices', 'purchases',
   'treasury_accounts', 'treasury_tx', 'journal_entries', 'employees', 'payslips', 'audit_logs',
   'opportunities', 'interactions', 'sales_orders', 'delivery_notes', 'sales_reps', 'pos_sessions',
-  'pos_receipts', 'projects', 'fixed_assets', 'documents', 'ai_insights',
+  'pos_receipts', 'projects', 'fixed_assets', 'documents',
 ]);
 
 export interface Payment {
@@ -188,16 +188,6 @@ class ApiClient {
 
   public setInquiryStatus(id: string, status: SupportInquiry['status']) {
     return this.request<{ ok: boolean }>('PATCH', `/admin/inquiries/${encodeURIComponent(id)}`, { status });
-  }
-
-  // ---- Assistant IA
-  public async assistantAvailable(): Promise<boolean> {
-    try { return !!(await (await fetch('/api/health')).json())?.assistant; } catch { return false; }
-  }
-
-  public async askAssistant(messages: { role: 'user' | 'assistant'; content: string }[], context: string): Promise<string> {
-    const res = await this.fileRequest('/assistant', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages, context }) });
-    return ((await res.json()) as { reply: string }).reply;
   }
 
   // ---- Archivage de fichiers (GED)

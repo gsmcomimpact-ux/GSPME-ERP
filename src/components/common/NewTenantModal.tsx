@@ -86,7 +86,7 @@ export function NewTenantModal({ isOpen, onClose, onTenantCreated }: NewTenantMo
       maxStorageMB: 10240,
       activeModules: [
         'dashboard', 'crm', 'sales', 'purchases', 'inventory', 'pos',
-        'accounting', 'treasury', 'payroll', 'projects', 'assets', 'documents', 'bi', 'ai', 'admin'
+        'accounting', 'treasury', 'payroll', 'projects', 'assets', 'documents', 'bi', 'admin'
       ],
       currentBranchId: branchId,
       branches: [

@@ -31,7 +31,7 @@ export const PLAN_CATALOG: Record<PlanId, PlanSpec> = {
   },
   PREMIUM: {
     id: 'PREMIUM', name: 'Premium', monthlyPriceFCFA: 10000, annualPriceFCFA: 100000, maxUsers: 50, maxStorageMB: 102400,
-    allowedModules: ['dashboard', 'crm', 'sales', 'purchases', 'inventory', 'pos', 'treasury', 'accounting', 'tax', 'payroll', 'assets', 'projects', 'documents', 'bi', 'ai'],
+    allowedModules: ['dashboard', 'crm', 'sales', 'purchases', 'inventory', 'pos', 'treasury', 'accounting', 'tax', 'payroll', 'assets', 'projects', 'documents', 'bi'],
   },
 };
 

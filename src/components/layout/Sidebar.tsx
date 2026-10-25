@@ -19,7 +19,6 @@ import {
   Truck,
   FolderOpen,
   BarChart3,
-  Sparkles,
   Settings,
   ShieldAlert,
   ShieldCheck,
@@ -48,7 +47,6 @@ export type NavModule =
   | 'projects'
   | 'documents'
   | 'bi'
-  | 'ai'
   | 'admin'
   | 'tests'
   | 'saas';
@@ -79,7 +77,6 @@ export function Sidebar({
       items: [
         { id: 'dashboard' as NavModule, label: 'Tableau de bord', icon: LayoutDashboard },
         { id: 'bi' as NavModule, label: 'Rapports & Analytics', icon: BarChart3 },
-        { id: 'ai' as NavModule, label: 'Assistant IA GSPME', icon: Sparkles, highlight: true },
       ],
     },
     {
@@ -203,19 +200,13 @@ export function Sidebar({
                         : 'text-white/75 hover:text-white hover:bg-white/8'
                     } ${locked ? 'opacity-55' : ''} ${collapsed ? 'justify-center px-0' : ''}`}
                   >
-                    <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#D4AF37]' : item.highlight ? 'text-[#D4AF37]' : 'text-white/70'}`} />
+                    <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#D4AF37]' : 'text-white/70'}`} />
                     {!collapsed && (
                       <span className="truncate flex items-center justify-between w-full">
                         <span>{item.label}</span>
                         {locked ? (
                           <Lock className="w-3 h-3 text-[#D4AF37]" aria-label="Non inclus dans votre formule" />
-                        ) : (
-                          item.highlight && (
-                            <span className="text-[9px] bg-[#D4AF37]/20 text-[#D4AF37] px-1 rounded font-bold uppercase">
-                              IA
-                            </span>
-                          )
-                        )}
+                        ) : null}
                       </span>
                     )}
                   </button>

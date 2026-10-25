@@ -9,7 +9,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { APP_DIR, all, dbConfigHint, initDb, maskDbMessage, one, run, socketDiagnostic, transaction } from './db.ts';
 import { adminListPayments, listPayments, runExpiry, startCheckout, webhookHandler } from './billing.ts';
-import { askAssistant, assistantEnabled } from './assistant.ts';
 import { chariowConfig, hasAnyLink, isBillingEnabled } from './chariow.ts';
 import { deleteFile, downloadFile, filesUsage, uploadFile } from './files.ts';
 import { MAX_FILE_BYTES } from '../shared/documents.ts';
@@ -34,14 +33,14 @@ const CURRENCY_BY_COUNTRY: Record<string, string> = {
 };
 const ALL_MODULES = [
   'dashboard', 'crm', 'contacts', 'sales', 'purchases', 'inventory', 'pos', 'accounting', 'treasury',
-  'tax', 'payroll', 'projects', 'assets', 'documents', 'bi', 'ai', 'admin',
+  'tax', 'payroll', 'projects', 'assets', 'documents', 'bi', 'admin',
 ];
 /** Collections métier synchronisées (noms = clés de stockage du front). */
 const COLLECTIONS = new Set([
   'customers', 'suppliers', 'products', 'warehouses', 'invoices', 'purchases',
   'treasury_accounts', 'treasury_tx', 'journal_entries', 'employees', 'payslips', 'audit_logs',
   'opportunities', 'interactions', 'sales_orders', 'delivery_notes', 'sales_reps',
-  'pos_sessions', 'pos_receipts', 'projects', 'fixed_assets', 'documents', 'ai_insights',
+  'pos_sessions', 'pos_receipts', 'projects', 'fixed_assets', 'documents',
 ]);
 /** Champs d'abonnement : modifiables uniquement par l'administrateur de la plateforme. */
 const BILLING_FIELDS = [
@@ -116,7 +115,6 @@ app.get('/api/health', (_req, res) => {
     db: dbReady,
     ...(dbReady ? {} : { dbError: dbErrorCode || 'INITIALISATION', dbHint: dbConfigHint(), dbMessage: dbErrorMessage, dbSockets: socketDiagnostic() }), // codes et valeurs masquées seulement
     billing: isBillingEnabled() || hasAnyLink(),
-    assistant: assistantEnabled(),
     billingMode: isBillingEnabled() ? 'api' : hasAnyLink() ? 'liens' : 'inactif',
     ...(isBillingEnabled() ? {} : { billingMissing: [!chariowConfig().apiKey && 'CHARIOW_API_KEY', !chariowConfig().webhookSecret && 'CHARIOW_WEBHOOK_SECRET'].filter(Boolean) }),
     time: new Date().toISOString(),
@@ -425,8 +423,6 @@ app.delete('/api/files/:id', requireAuth, asyncH(deleteFile));
 
 // ---------------------------------------------------------------- Paiement des abonnements (Chariow)
 const billingLimiter = rateLimit(15, 15 * 60 * 1000);
-const assistantLimiter = rateLimit(30, 5 * 60 * 1000);
-app.post('/api/assistant', assistantLimiter, requireAuth, asyncH(askAssistant));
 app.post('/api/billing/checkout', billingLimiter, requireAuth, asyncH(startCheckout));
 app.get('/api/billing/payments', requireAuth, asyncH(listPayments));
 app.get('/api/admin/payments', superGuard, asyncH(adminListPayments));

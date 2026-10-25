@@ -841,13 +841,6 @@ export function LandingPage({ onSelectPlanToSubscribe, onEnterDemoApp, onOpenLog
                   <td className="py-3 px-4 text-center"><Check className="w-4 h-4 text-[#0F5132] mx-auto" /></td>
                 </tr>
                 <tr>
-                  <td className="py-3 px-5">Assistant IA GSPME (Analyse financière)</td>
-                  <td className="py-3 px-4 text-center"><X className="w-4 h-4 text-slate-300 mx-auto" /></td>
-                  <td className="py-3 px-4 text-center"><X className="w-4 h-4 text-slate-300 mx-auto" /></td>
-                  <td className="py-3 px-4 text-center bg-emerald-50/30"><X className="w-4 h-4 text-slate-300 mx-auto" /></td>
-                  <td className="py-3 px-4 text-center"><Check className="w-4 h-4 text-[#0F5132] mx-auto" /></td>
-                </tr>
-                <tr>
                   <td className="py-3 px-5 font-semibold text-slate-900">Support Client & Formation</td>
                   <td className="py-3 px-4 text-center">Email & Centre d'aide</td>
                   <td className="py-3 px-4 text-center">WhatsApp (24h)</td>

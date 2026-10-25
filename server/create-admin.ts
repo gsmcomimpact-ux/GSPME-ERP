@@ -10,7 +10,7 @@ import { hashPassword } from './auth.ts';
 
 const ALL_MODULES = [
   'dashboard', 'crm', 'sales', 'purchases', 'inventory', 'pos', 'accounting', 'treasury',
-  'tax', 'payroll', 'projects', 'assets', 'documents', 'bi', 'ai', 'admin',
+  'tax', 'payroll', 'projects', 'assets', 'documents', 'bi', 'admin',
 ];
 
 async function main() {

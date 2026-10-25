@@ -18,7 +18,7 @@ Variables de connexion : `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAM
 
 Les collections de `records` : `customers`, `suppliers`, `products`, `warehouses`, `invoices`, `purchases`, `treasury_accounts`,
 `treasury_tx`, `journal_entries`, `employees`, `payslips`, `audit_logs`, `opportunities`, `interactions`, `sales_orders`,
-`delivery_notes`, `sales_reps`, `pos_sessions`, `pos_receipts`, `projects`, `fixed_assets`, `documents`, `ai_insights`.
+`delivery_notes`, `sales_reps`, `pos_sessions`, `pos_receipts`, `projects`, `fixed_assets`, `documents`.
 
 **Isolation :** chaque ligne de `records` porte le `tenant_id` de son entreprise ; le serveur le déduit du jeton de connexion, jamais du navigateur.
 

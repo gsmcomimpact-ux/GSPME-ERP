@@ -29,7 +29,6 @@ import {
   Project,
   FixedAsset,
   StoredDocument,
-  AiInsight,
 } from '../types';
 import {
   INITIAL_TENANTS,
@@ -56,7 +55,6 @@ import {
   INITIAL_PROJECTS,
   INITIAL_FIXED_ASSETS,
   INITIAL_DOCUMENTS,
-  INITIAL_AI_INSIGHTS,
 } from '../data/initialData';
 import { api, type SyncSnapshot } from './api';
 
@@ -87,7 +85,6 @@ const STORAGE_KEYS = {
   PROJECTS: 'gspme_projects_v2',
   FIXED_ASSETS: 'gspme_fixed_assets_v2',
   DOCUMENTS: 'gspme_documents_v2',
-  AI_INSIGHTS: 'gspme_ai_insights_v2',
 };
 
 function getFromStorage<T>(key: string, defaultValue: T): T {
@@ -388,17 +385,6 @@ export class SaaSStorageService {
     const all = getFromStorage(STORAGE_KEYS.DOCUMENTS, INITIAL_DOCUMENTS);
     saveToStorage(STORAGE_KEYS.DOCUMENTS, [doc, ...all]);
     this.logAudit('CREATION', 'DOCUMENTS', `Archivage document : ${doc.title}`);
-    this.notify();
-  }
-
-  // MODULE O — AI Insights
-  public getAiInsights(): AiInsight[] {
-    return getFromStorage(STORAGE_KEYS.AI_INSIGHTS, INITIAL_AI_INSIGHTS);
-  }
-
-  public addAiInsight(insight: AiInsight): void {
-    const all = getFromStorage(STORAGE_KEYS.AI_INSIGHTS, INITIAL_AI_INSIGHTS);
-    saveToStorage(STORAGE_KEYS.AI_INSIGHTS, [insight, ...all]);
     this.notify();
   }
 

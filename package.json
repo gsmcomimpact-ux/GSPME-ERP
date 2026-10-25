@@ -15,7 +15,7 @@
     "build:server": "esbuild server/index.ts --bundle --platform=node --target=node18 --format=cjs --external:mysql2 --outfile=deploy/server.js && esbuild server/create-admin.ts --bundle --platform=node --target=node18 --format=cjs --external:mysql2 --outfile=deploy/create-admin.js && esbuild server/check-db.ts --bundle --platform=node --target=node18 --format=cjs --external:mysql2 --outfile=deploy/check-db.js",
     "build:deploy": "vite build && rm -rf deploy && mkdir -p deploy && npm run build:server && cp -r dist deploy/dist && node scripts/deploy-package.mjs",
     "create-admin": "tsx server/create-admin.ts",
-    "test:unit": "tsx --test src/services/exportService.test.ts src/services/invoiceTemplates.test.ts shared/plans.test.ts src/services/projectCosts.test.ts src/services/dashboardInsights.test.ts src/services/assistantEngine.test.ts"
+    "test:unit": "tsx --test src/services/exportService.test.ts src/services/invoiceTemplates.test.ts shared/plans.test.ts src/services/projectCosts.test.ts src/services/dashboardInsights.test.ts"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
