@@ -334,6 +334,20 @@ export class SaaSStorageService {
     this.notify();
   }
 
+  public updateProject(project: Project): void {
+    const all = getFromStorage(STORAGE_KEYS.PROJECTS, INITIAL_PROJECTS);
+    saveToStorage(STORAGE_KEYS.PROJECTS, all.map(p => (p.id === project.id ? project : p)));
+    this.notify();
+  }
+
+  public deleteProject(projectId: string): void {
+    const all = getFromStorage(STORAGE_KEYS.PROJECTS, INITIAL_PROJECTS);
+    const p = all.find(x => x.id === projectId);
+    saveToStorage(STORAGE_KEYS.PROJECTS, all.filter(x => x.id !== projectId));
+    this.logAudit('SUPPRESSION', 'PROJETS', `Suppression projet ${p?.title || projectId}`);
+    this.notify();
+  }
+
   public updateProjectProgress(projectId: string, progress: number): void {
     const all = getFromStorage(STORAGE_KEYS.PROJECTS, INITIAL_PROJECTS);
     const updated = all.map(p => (p.id === projectId ? { ...p, progressPercent: progress } : p));

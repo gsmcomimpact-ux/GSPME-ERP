@@ -430,7 +430,19 @@ export interface ProjectTask {
   assignedTo: string;
   dueDate: string;
   completed: boolean;
+  /** Montant déjà dépensé pour cette tâche (somme des dépenses rattachées). */
   cost: number;
+  /** Budget prévu pour la tâche (facultatif). */
+  budget?: number;
+}
+
+export interface ProjectExpense {
+  id: string;
+  date: string;
+  label: string;
+  amount: number;
+  taskId?: string;
+  supplier?: string;
 }
 
 export interface Project {
@@ -450,6 +462,8 @@ export interface Project {
   endDate: string;
   status: 'PLANIFIE' | 'EN_COURS' | 'LIVRE' | 'SUSPENDU';
   tasks: ProjectTask[];
+  /** Dépenses saisies sur le projet (le coût réel en est le cumul). */
+  expenses?: ProjectExpense[];
 }
 
 // MODULE L — Immobilisations & Amortissements

@@ -190,6 +190,16 @@ class ApiClient {
     return this.request<{ ok: boolean }>('PATCH', `/admin/inquiries/${encodeURIComponent(id)}`, { status });
   }
 
+  // ---- Assistant IA
+  public async assistantAvailable(): Promise<boolean> {
+    try { return !!(await (await fetch('/api/health')).json())?.assistant; } catch { return false; }
+  }
+
+  public async askAssistant(messages: { role: 'user' | 'assistant'; content: string }[], context: string): Promise<string> {
+    const res = await this.fileRequest('/assistant', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages, context }) });
+    return ((await res.json()) as { reply: string }).reply;
+  }
+
   // ---- Archivage de fichiers (GED)
   private async fileRequest(path: string, init: RequestInit = {}): Promise<Response> {
     const res = await fetch(`/api${path}`, { ...init, headers: { ...(init.headers || {}), ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}) } });

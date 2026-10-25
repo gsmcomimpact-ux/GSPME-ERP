@@ -33,7 +33,9 @@ import {
   Customer,
   PurchaseInvoice,
   SalesOrder,
+  Project,
 } from '../../types';
+import { buildAlerts, monthlySeries, openTasks } from '../../services/dashboardInsights';
 import { formatMoney } from '../../services/currency';
 import { KpiCard, StatusIndicator } from '../common/UIComponents';
 
@@ -45,6 +47,7 @@ interface DashboardProps {
   treasuryAccounts: TreasuryAccount[];
   customers: Customer[];
   salesOrders: SalesOrder[];
+  projects?: Project[];
   onNavigate: (module: any) => void;
   onOpenQuickCreate: (type: 'INVOICE' | 'CUSTOMER' | 'TRANSACTION' | 'PRODUCT') => void;
 }
@@ -57,12 +60,20 @@ export function ExecutiveDashboard({
   treasuryAccounts,
   customers,
   salesOrders,
+  projects = [],
   onNavigate,
   onOpenQuickCreate,
 }: DashboardProps) {
   // Period & Branch Filter State
   const [periodFilter, setPeriodFilter] = useState<'MOIS' | 'TRIMESTRE' | 'ANNEE'>('MOIS');
   const [selectedBranchId, setSelectedBranchId] = useState<string>('ALL');
+
+  // Évolution mensuelle, alertes et tâches : uniquement à partir des données réelles
+  const series = monthlySeries(invoices, purchases);
+  const seriesSales = series.reduce((n, m) => n + m.sales, 0);
+  const seriesCosts = series.reduce((n, m) => n + m.costs, 0);
+  const alerts = buildAlerts({ invoices, products, salesOrders, projects }, n => formatMoney(n, tenant.currency));
+  const tasks = openTasks(projects);
 
   // Real data calculations
   const salesInvoices = invoices.filter(
@@ -330,14 +341,15 @@ export function ExecutiveDashboard({
               </div>
             </div>
 
+            {series.length === 0 ? (
+              <div className="mt-4 h-44 flex flex-col items-center justify-center text-center text-xs text-slate-500 border border-dashed border-slate-200 rounded-lg">
+                <p className="font-semibold text-slate-700">Aucune donnée pour le moment</p>
+                <p className="mt-1">Le graphique se remplira dès votre première facture de vente ou d'achat.</p>
+              </div>
+            ) : (
             <div className="mt-4 h-44 flex items-end justify-between gap-4 px-2 pt-4 pb-2">
-              {[
-                { month: 'Janvier', sales: 16200000, costs: 11400000 },
-                { month: 'Février', sales: 21800000, costs: 14200000 },
-                { month: 'Mars', sales: 27865400, costs: 18100000 },
-                { month: 'Avril (En cours)', sales: 29500000, costs: 16500000 },
-              ].map((item, idx) => {
-                const maxVal = 32000000;
+              {series.map((item, idx) => {
+                const maxVal = Math.max(...series.map(m => Math.max(m.sales, m.costs)), 1);
                 const salesHeight = (item.sales / maxVal) * 100;
                 const costHeight = (item.costs / maxVal) * 100;
                 return (
@@ -360,15 +372,16 @@ export function ExecutiveDashboard({
                         </div>
                       </div>
                     </div>
-                    <span className="text-[11px] font-medium text-slate-600 truncate">{item.month}</span>
+                    <span className="text-[11px] font-medium text-slate-600 truncate">{item.label}</span>
                   </div>
                 );
               })}
             </div>
+            )}
           </div>
 
           <div className="mt-2 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-            <span>Taux de marge opérationnelle : <strong className="text-slate-800">38.2%</strong></span>
+            <span>Taux de marge opérationnelle : <strong className="text-slate-800">{seriesSales > 0 ? `${(((seriesSales - seriesCosts) / seriesSales) * 100).toFixed(1)}%` : '—'}</strong></span>
             <button
               onClick={() => onNavigate('bi')}
               className="text-[#0F5132] font-semibold hover:underline flex items-center gap-0.5 cursor-pointer"
@@ -390,64 +403,39 @@ export function ExecutiveDashboard({
           <span className="text-[11px] text-slate-400">Actions requises sans délai</span>
         </div>
 
+        {alerts.length === 0 && tasks.length === 0 ? (
+          <p className="text-xs text-slate-500 py-4 text-center">Aucune alerte ni tâche en attente. Tout est à jour.</p>
+        ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-          {/* Alerte 1: Créance client */}
-          <div className="p-3.5 rounded-lg bg-amber-50/60 border border-amber-200/60 flex flex-col justify-between">
-            <div>
-              <div className="font-bold text-amber-950 flex items-center justify-between">
-                <span>Relance Client Prioritaire</span>
-                <span className="text-[10px] font-bold text-amber-800 uppercase">Échu</span>
+          {alerts.slice(0, 6).map(al => {
+            const tone = { amber: 'bg-amber-50/60 border-amber-200/60 text-amber-950', rose: 'bg-rose-50/60 border-rose-200/60 text-rose-950', blue: 'bg-blue-50/60 border-blue-200/60 text-blue-950' }[al.tone];
+            return (
+              <div key={al.id} data-testid="dash-alert" className={`p-3.5 rounded-lg border flex flex-col justify-between ${tone}`}>
+                <div>
+                  <div className="font-bold flex items-center justify-between">
+                    <span>{al.title}</span>
+                    <span className="text-[10px] font-bold uppercase opacity-80">{al.tag}</span>
+                  </div>
+                  <p className="mt-1 text-[11px] opacity-90">{al.text}</p>
+                </div>
+                <button onClick={() => onNavigate(al.module)} className="mt-3 text-left font-bold text-[#0F5132] hover:underline cursor-pointer">{al.action}</button>
               </div>
-              <p className="mt-1 text-[11px] text-amber-800">
-                Facture FAC-2026-0041 sur <strong>CSE SA</strong> : 6 850 000 FCFA impayés depuis plus de 15 jours.
-              </p>
-            </div>
-            <button
-              onClick={() => onNavigate('sales')}
-              className="mt-3 text-left font-bold text-[#0F5132] hover:underline cursor-pointer"
-            >
-              Émettre relance →
-            </button>
-          </div>
-
-          {/* Alerte 2: Rupture stock */}
-          <div className="p-3.5 rounded-lg bg-rose-50/60 border border-rose-200/60 flex flex-col justify-between">
-            <div>
-              <div className="font-bold text-rose-950 flex items-center justify-between">
-                <span>Seuil Critique de Stock</span>
-                <span className="text-[10px] font-bold text-rose-800 uppercase">Alerte</span>
+            );
+          })}
+          {tasks.slice(0, 6).map(t => (
+            <div key={t.id} data-testid="dash-task" className={`p-3.5 rounded-lg border flex flex-col justify-between ${t.late ? 'bg-rose-50/60 border-rose-200/60 text-rose-950' : 'bg-slate-50 border-slate-200 text-slate-900'}`}>
+              <div>
+                <div className="font-bold flex items-center justify-between">
+                  <span>{t.title}</span>
+                  <span className="text-[10px] font-bold uppercase opacity-80">{t.late ? 'En retard' : 'Tâche'}</span>
+                </div>
+                <p className="mt-1 text-[11px] opacity-90">Projet « {t.project} » — échéance {t.dueDate}.</p>
               </div>
-              <p className="mt-1 text-[11px] text-rose-800">
-                Peinture blanche satinée 20L : plus que 8 pots disponibles (seuil de sécurité : 15).
-              </p>
+              <button onClick={() => onNavigate('projects')} className="mt-3 text-left font-bold text-[#0F5132] hover:underline cursor-pointer">Ouvrir les projets →</button>
             </div>
-            <button
-              onClick={() => onNavigate('inventory')}
-              className="mt-3 text-left font-bold text-[#0F5132] hover:underline cursor-pointer"
-            >
-              Gérer réapprovisionnement →
-            </button>
-          </div>
-
-          {/* Alerte 3: Commande à livrer */}
-          <div className="p-3.5 rounded-lg bg-blue-50/60 border border-blue-200/60 flex flex-col justify-between">
-            <div>
-              <div className="font-bold text-blue-950 flex items-center justify-between">
-                <span>Expédition Commande Client</span>
-                <span className="text-[10px] font-bold text-blue-800 uppercase">Logistique</span>
-              </div>
-              <p className="mt-1 text-[11px] text-blue-800">
-                Commande CMD-2026-0033 confirmée pour la CSE SA prête pour émission de Bon de Livraison.
-              </p>
-            </div>
-            <button
-              onClick={() => onNavigate('sales')}
-              className="mt-3 text-left font-bold text-[#0F5132] hover:underline cursor-pointer"
-            >
-              Émettre bon de livraison →
-            </button>
-          </div>
+          ))}
         </div>
+        )}
       </div>
     </div>
   );

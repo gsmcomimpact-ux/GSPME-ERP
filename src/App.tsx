@@ -435,6 +435,7 @@ export default function App() {
               treasuryAccounts={treasuryAccounts}
               customers={customers}
               salesOrders={salesOrders}
+              projects={projects}
               onNavigate={mod => setActiveModule(mod)}
               onOpenQuickCreate={type => setQuickCreateType(type)}
             />
@@ -575,10 +576,13 @@ export default function App() {
             <AiAssistantModule
               tenant={tenant}
               invoices={invoices}
+              purchases={purchases}
               products={products}
               treasuryAccounts={treasuryAccounts}
               customers={customers}
-              aiInsights={aiInsights}
+              projects={projects}
+              salesOrders={salesOrders}
+              serverMode={serverMode}
               userRole={currentUser.role}
             />
           )}

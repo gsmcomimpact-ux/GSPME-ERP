@@ -449,6 +449,44 @@ const getFile = async (token: string | undefined, id: string, query = '') => {
   return { status: res.status, headers: res.headers, buf: Buffer.from(await res.arrayBuffer()) };
 };
 
+test('assistant IA : clé serveur, historique, contrôles et erreurs', async () => {
+  const calls: any[] = [];
+  let mode: 'ok' | 'down' = 'ok';
+  const fake = http.createServer((req, res) => {
+    let b = ''; req.on('data', c => (b += c)); req.on('end', () => {
+      calls.push({ headers: req.headers, body: JSON.parse(b) });
+      if (mode === 'down') { res.writeHead(500, { 'content-type': 'application/json' }); res.end('{}'); return; }
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ content: [{ type: 'text', text: 'Votre trésorerie est saine.' }] }));
+    });
+  }).listen(0);
+  await new Promise(r => fake.once('listening', r));
+  const { token } = await registerCI('ai1');
+  const msgs = [{ role: 'user', content: 'Bonjour' }, { role: 'assistant', content: 'Salut' }, { role: 'user', content: 'Ma trésorerie ?' }];
+  assert.equal((await call('POST', '/assistant', { messages: msgs, context: 'x' })).status, 401);
+  delete process.env.ANTHROPIC_API_KEY;
+  const off = await call('POST', '/assistant', { messages: msgs }, token);
+  assert.equal(off.status, 503);
+  assert.equal((await (await fetch(base + '/health')).json()).assistant, false);
+
+  process.env.ANTHROPIC_API_KEY = 'sk-ant-test';
+  process.env.ANTHROPIC_API_URL = `http://127.0.0.1:${(fake.address() as AddressInfo).port}/v1`;
+  assert.equal((await (await fetch(base + '/health')).json()).assistant, true);
+  assert.equal((await call('POST', '/assistant', { messages: [] }, token)).status, 400);
+  assert.equal((await call('POST', '/assistant', { messages: [{ role: 'assistant', content: 'x' }] }, token)).status, 400);
+  const ok = await call('POST', '/assistant', { messages: msgs, context: 'CA 1000 F' }, token);
+  assert.equal(ok.status, 200);
+  assert.equal(ok.body.reply, 'Votre trésorerie est saine.');
+  const sent = calls[calls.length - 1];
+  assert.equal(sent.headers['x-api-key'], 'sk-ant-test');
+  assert.equal(sent.body.messages.length, 3);
+  assert.match(sent.body.system, /CA 1000 F/);
+  mode = 'down';
+  assert.equal((await call('POST', '/assistant', { messages: msgs }, token)).status, 502);
+  fake.close();
+  delete process.env.ANTHROPIC_API_KEY; delete process.env.ANTHROPIC_API_URL;
+});
+
 test('GED : dépôt, empreinte, téléchargement et en-têtes de sécurité', async () => {
   const { token } = await registerCI('ged1');
   const up = await upload(token, 'Contrat client é.pdf', PDF);
