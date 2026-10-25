@@ -17,8 +17,8 @@ const STORE_URL = 'https://eflaptzj.mychariow.co';
 const DEFAULTS: Record<string, string> = {
   ESSENTIEL_MENSUEL: 'prd_7x83esog',
   ESSENTIEL_ANNUEL: 'prd_ikzmqpx3',
-  BUSINESS_MENSUEL: 'prd_cbq1etzr',
-  BUSINESS_ANNUEL: 'prd_cbq1etzr', // à vérifier : même produit que le mensuel
+  BUSINESS_MENSUEL: 'prd_37f4qhkp',
+  BUSINESS_ANNUEL: 'prd_cbq1etzr',
   PREMIUM_MENSUEL: 'prd_n51v447e',
   PREMIUM_ANNUEL: 'prd_snzlt3f6',
 };
