@@ -29,7 +29,6 @@ import {
   Project,
   FixedAsset,
   StoredDocument,
-  AiInsight,
 } from '../types';
 
 export const INITIAL_TENANTS: Tenant[] = [
@@ -38,7 +37,7 @@ export const INITIAL_TENANTS: Tenant[] = [
     name: 'Sénégal BTP & Logistique SARL',
     tradeName: 'SBL Afrique',
     legalForm: 'SARL',
-    logoUrl: '/src/assets/images/gspme_logo.jpg',
+    logoUrl: '/gspme_logo.jpg',
     countryCode: 'SN',
     taxNumber: 'NINEA 008472912 2S2',
     tradeRegisterNumber: 'RCCM SN-DKR-2021-B-14205',
@@ -56,7 +55,7 @@ export const INITIAL_TENANTS: Tenant[] = [
     maxStorageMB: 102400,
     activeModules: [
       'dashboard', 'crm', 'sales', 'purchases', 'inventory', 'pos',
-      'accounting', 'treasury', 'tax', 'payroll', 'projects', 'assets', 'documents', 'bi', 'ai', 'admin'
+      'accounting', 'treasury', 'tax', 'payroll', 'projects', 'assets', 'documents', 'bi', 'admin'
     ],
     currentBranchId: 'branch-dkr-1',
     branches: [
@@ -106,7 +105,7 @@ export const INITIAL_TENANTS: Tenant[] = [
     subscriptionPlan: 'BUSINESS',
     subscriptionStatus: 'ACTIVE',
     billingCycle: 'MENSUEL',
-    monthlySubscriptionAmount: 25000,
+    monthlySubscriptionAmount: 7500,
     maxUsers: 15,
     maxStorageMB: 51200,
     activeModules: ['dashboard', 'crm', 'sales', 'purchases', 'inventory', 'pos', 'accounting', 'treasury', 'tax', 'payroll', 'projects'],
@@ -140,7 +139,7 @@ export const INITIAL_TENANTS: Tenant[] = [
     subscriptionPlan: 'ESSENTIEL',
     subscriptionStatus: 'ACTIVE',
     billingCycle: 'MENSUEL',
-    monthlySubscriptionAmount: 15000,
+    monthlySubscriptionAmount: 5000,
     maxUsers: 5,
     maxStorageMB: 10240,
     activeModules: ['dashboard', 'crm', 'sales', 'purchases', 'inventory', 'pos', 'treasury'],
@@ -686,39 +685,6 @@ export const INITIAL_DOCUMENTS: StoredDocument[] = [
     uploadedBy: 'Jean-Marc Kouassi',
     relatedEntity: 'FAC-2026-0041',
     securityLevel: 'DIRECTION_SEULEMENT',
-  },
-];
-
-export const INITIAL_AI_INSIGHTS: AiInsight[] = [
-  {
-    id: 'ai-1',
-    timestamp: '2026-04-12 09:30',
-    type: 'ANOMALIE_TRESORERIE',
-    severity: 'ATTENTION',
-    title: 'Écart de décaissement carburant détecté (+24%)',
-    analysis: 'Les dépenses en compte 605 Carburant ont augmenté de 24% sur les 15 derniers jours comparativement au volume kilométrique logistique déclaré.',
-    recommendedAction: 'Vérifier les bons de commande TotalEnergies et réconcilier les tickets avec la télématique des camions Mercedes Actros.',
-    sourceDataReference: 'Compte OHADA 605 / Facture pur-2',
-  },
-  {
-    id: 'ai-2',
-    timestamp: '2026-04-10 16:00',
-    type: 'ALERTE_RECOUVREMENT',
-    severity: 'CRITIQUE',
-    title: 'Créance client dépassée : 6 850 000 FCFA sur CSE SA',
-    analysis: 'La facture FAC-2026-0041 a dépassé son échéance de règlement négociée. L\'encours client atteint 27% du plafond de crédit autorisé.',
-    recommendedAction: 'Générer la lettre de relance automatique et contacter le service comptabilité fournisseur de la CSE.',
-    sourceDataReference: 'Facture inv-1 / Client cust-1',
-  },
-  {
-    id: 'ai-3',
-    timestamp: '2026-04-08 11:20',
-    type: 'PREVISION_DECAISSEMENT',
-    severity: 'INFO',
-    title: 'Prévisionnel de trésorerie à 15 jours : Solde excédentaire',
-    analysis: 'Avec les encaissements attendus (14.2M FCFA) et les échéances fournisseurs (8.4M FCFA Ciments du Sahel + 1.6M FCFA charges sociales), la trésorerie nette prévisionnelle restera confortable à > 65M FCFA.',
-    recommendedAction: 'Possibilité d\'envisager le placement d\'excédent de trésorerie en dépôt à terme ou de solder par anticipation pour escompte.',
-    sourceDataReference: 'Comptes Banques 5211 / Échéancier pur-1',
   },
 ];
 

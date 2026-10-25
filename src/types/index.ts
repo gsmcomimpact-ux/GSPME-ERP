@@ -51,12 +51,15 @@ export interface Branch {
   isHeadquarters: boolean;
 }
 
+export type InvoiceTemplateId = 'CLASSIQUE' | 'MODERNE' | 'MINIMALISTE' | 'ELEGANT' | 'CORPORATE';
+
 export interface Tenant {
   id: string;
   name: string;
   tradeName?: string;
   legalForm: 'SARL' | 'SAS' | 'SA' | 'SUARL' | 'GIE' | 'ENTREPRISE_INDIVIDUELLE';
   logoUrl?: string; // Logo personnalisé de l'entreprise (Base64 data URL ou URL d'image)
+  invoiceTemplate?: InvoiceTemplateId; // Modèle PDF des factures et devis (défaut : CLASSIQUE)
   countryCode: CountryCode;
   taxNumber: string;
   tradeRegisterNumber: string;
@@ -427,7 +430,19 @@ export interface ProjectTask {
   assignedTo: string;
   dueDate: string;
   completed: boolean;
+  /** Montant déjà dépensé pour cette tâche (somme des dépenses rattachées). */
   cost: number;
+  /** Budget prévu pour la tâche (facultatif). */
+  budget?: number;
+}
+
+export interface ProjectExpense {
+  id: string;
+  date: string;
+  label: string;
+  amount: number;
+  taskId?: string;
+  supplier?: string;
 }
 
 export interface Project {
@@ -447,6 +462,8 @@ export interface Project {
   endDate: string;
   status: 'PLANIFIE' | 'EN_COURS' | 'LIVRE' | 'SUSPENDU';
   tasks: ProjectTask[];
+  /** Dépenses saisies sur le projet (le coût réel en est le cumul). */
+  expenses?: ProjectExpense[];
 }
 
 // MODULE L — Immobilisations & Amortissements
@@ -474,14 +491,21 @@ export interface StoredDocument {
   id: string;
   tenantId: string;
   title: string;
-  category: 'CONTRAT' | 'JUSTIFICATIF_FISCAL' | 'FACTURE_SIGNEE' | 'PLAN_TECHNIQUE' | 'STATUTS_SOCIETE';
-  fileType: 'PDF' | 'IMAGE' | 'EXCEL' | 'DOC';
+  category: 'CONTRAT' | 'JUSTIFICATIF_FISCAL' | 'FACTURE_SIGNEE' | 'PLAN_TECHNIQUE' | 'STATUTS_SOCIETE' | 'AUTRE';
+  fileType: 'PDF' | 'IMAGE' | 'EXCEL' | 'DOC' | 'AUTRE';
   sizeKB: number;
   uploadedAt: string;
   uploadedBy: string;
   relatedEntity?: string; // Ex: "FAC-2026-0041"
   securityLevel: 'PUBLIC_ENTREPRISE' | 'CONFIDENTIEL_DAF' | 'DIRECTION_SEULEMENT';
   downloadUrl?: string;
+  /** Fichier archivé (absent pour les fiches de démonstration). */
+  fileId?: string;
+  fileName?: string;
+  mime?: string;
+  /** Empreinte SHA-256 du fichier au moment du dépôt (preuve d'intégrité). */
+  sha256?: string;
+  uploadedById?: string;
 }
 
 // MODULE N — Rapports BI
@@ -494,18 +518,6 @@ export interface BiReportMetrics {
   clientReceivablesOutstanding: number;
   supplierDebtOutstanding: number;
   inventoryTurnoverRatio: number;
-}
-
-// MODULE O — IA Assistant Insights
-export interface AiInsight {
-  id: string;
-  timestamp: string;
-  type: 'ANOMALIE_TRESORERIE' | 'OPPORTUNITE_MARGE' | 'PREVISION_DECAISSEMENT' | 'ALERTE_RECOUVREMENT';
-  severity: 'INFO' | 'ATTENTION' | 'CRITIQUE';
-  title: string;
-  analysis: string;
-  recommendedAction: string;
-  sourceDataReference: string;
 }
 
 // MODULE P — Plateforme Super Admin

@@ -40,14 +40,22 @@ import {
 } from 'lucide-react';
 import { SubscriptionPlanConfig, SubscriptionPlanId, BillingCycle, CountryCode } from '../../types';
 import { subscriptionService } from '../../services/subscriptionService';
+import { api } from '../../services/api';
 import { COUNTRY_PACKS, formatMoney } from '../../services/currency';
 
 interface LandingPageProps {
   onSelectPlanToSubscribe: (planId: SubscriptionPlanId, cycle: BillingCycle) => void;
   onEnterDemoApp: () => void;
+  /** Ouvre l'espace de connexion (email + mot de passe). */
+  onOpenLogin: () => void;
+  /** Utilisateur actuellement connecté (null si aucune session). */
+  session?: { name: string; role: string } | null;
+  /** Retourne dans l'ERP quand une session est ouverte. */
+  onEnterApp?: () => void;
+  onLogout?: () => void;
 }
 
-export function LandingPage({ onSelectPlanToSubscribe, onEnterDemoApp }: LandingPageProps) {
+export function LandingPage({ onSelectPlanToSubscribe, onEnterDemoApp, onOpenLogin, session, onEnterApp, onLogout }: LandingPageProps) {
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('MENSUEL');
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -78,11 +86,14 @@ export function LandingPage({ onSelectPlanToSubscribe, onEnterDemoApp }: Landing
 
   const plans = subscriptionService.getPlans();
 
-  const handleContactSubmit = (e: React.FormEvent) => {
+  const [contactError, setContactError] = useState('');
+
+  const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!contactName || !contactEmail || !contactMessage) return;
+    setContactError('');
 
-    subscriptionService.submitSupportInquiry({
+    const inquiry = {
       name: contactName,
       email: contactEmail,
       phone: contactPhone,
@@ -90,7 +101,14 @@ export function LandingPage({ onSelectPlanToSubscribe, onEnterDemoApp }: Landing
       country: contactCountry,
       subject: contactSubject,
       message: contactMessage,
-    });
+    };
+    try {
+      if (await api.isServerAvailable()) await api.submitContact(inquiry);
+      else subscriptionService.submitSupportInquiry(inquiry); // mode démo : stockage local
+    } catch (err) {
+      setContactError((err as Error).message || "Envoi impossible, merci de réessayer.");
+      return;
+    }
 
     setContactSubmitted(true);
     setTimeout(() => {
@@ -134,16 +152,16 @@ export function LandingPage({ onSelectPlanToSubscribe, onEnterDemoApp }: Landing
     <div className="min-h-screen bg-[#FAF9F6] text-slate-800 font-sans selection:bg-[#0F5132] selection:text-white">
       {/* Top Navigation Header */}
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
           {/* Logo cliquable -> Retour en haut */}
           <button
             onClick={scrollToTop}
-            className="flex items-center gap-3 text-left group cursor-pointer focus:outline-hidden"
+            className="flex items-center gap-3 text-left group cursor-pointer focus:outline-hidden shrink-0"
             title="GSPME-ERP Accueil"
           >
             <div className="w-10 h-10 rounded-xl overflow-hidden bg-white p-0.5 border border-slate-200/90 shadow-2xs group-hover:scale-105 transition-transform shrink-0">
               <img
-                src="/src/assets/images/gspme_logo.jpg"
+                src="/gspme_logo.jpg"
                 alt="GSPME-ERP"
                 referrerPolicy="no-referrer"
                 className="w-full h-full object-contain rounded-lg"
@@ -154,64 +172,66 @@ export function LandingPage({ onSelectPlanToSubscribe, onEnterDemoApp }: Landing
                 <span>GSPME</span>
                 <span className="text-[#D4AF37]">-ERP</span>
               </div>
-              <span className="text-[10px] text-slate-500 block -mt-0.5 font-medium">Croissance connectée en Afrique</span>
+              <span className="hidden sm:block text-[10px] text-slate-500 -mt-0.5 font-medium whitespace-nowrap">Croissance connectée en Afrique</span>
             </div>
           </button>
 
           {/* Desktop Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-6 text-xs font-semibold text-slate-600">
+          <nav className="hidden lg:flex flex-1 items-center justify-center gap-1 text-xs font-semibold text-slate-600">
             <button
               onClick={() => scrollToSection('fonctionnalites')}
-              className="hover:text-[#0F5132] transition-colors cursor-pointer py-1"
+              className="px-3.5 h-9 rounded-lg hover:bg-emerald-50 hover:text-[#0F5132] transition-colors cursor-pointer"
             >
               Fonctionnalités
             </button>
             <button
-              onClick={() => scrollToSection('avantages')}
-              className="hover:text-[#0F5132] transition-colors cursor-pointer py-1"
-            >
-              Avantages Afrique
-            </button>
-            <button
               onClick={() => scrollToSection('tarifs')}
-              className="hover:text-[#0F5132] transition-colors cursor-pointer py-1 font-bold text-slate-900"
+              className="px-3.5 h-9 rounded-lg hover:bg-emerald-50 hover:text-[#0F5132] transition-colors cursor-pointer"
             >
               Tarifs & Offres
             </button>
             <button
-              onClick={() => scrollToSection('comparatif')}
-              className="hover:text-[#0F5132] transition-colors cursor-pointer py-1"
-            >
-              Comparatif
-            </button>
-            <button
               onClick={() => scrollToSection('faq')}
-              className="hover:text-[#0F5132] transition-colors cursor-pointer py-1"
+              className="px-3.5 h-9 rounded-lg hover:bg-emerald-50 hover:text-[#0F5132] transition-colors cursor-pointer"
             >
               FAQ
-            </button>
-            <button
-              onClick={() => scrollToSection('contact')}
-              className="hover:text-[#0F5132] transition-colors cursor-pointer py-1"
-            >
-              Support & Contact
             </button>
           </nav>
 
           {/* Right Header Actions */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            <button
-              onClick={onEnterDemoApp}
-              className="px-3 sm:px-3.5 py-2 text-xs font-bold text-[#0F5132] hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
-              title="Tester l'ERP en direct avec données démo"
-            >
-              <span>Accéder à l'ERP (Démo)</span>
-              <ExternalLink className="w-3.5 h-3.5 opacity-70" />
-            </button>
+          <div className="flex items-center gap-2 shrink-0">
+            {session ? (
+              <>
+                <button
+                  onClick={onEnterApp}
+                  className="px-3.5 h-9 text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                  title={`Connecté : ${session.name}`}
+                >
+                  <span>Mon espace</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={onLogout}
+                  className="px-3.5 h-9 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                >
+                  Déconnexion
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={onOpenLogin}
+                  className="px-3.5 h-9 text-xs font-bold border border-[#0F5132]/30 text-[#0F5132] hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <Lock className="w-3.5 h-3.5" />
+                  <span>Connexion</span>
+                </button>
+              </>
+            )}
 
             <button
               onClick={() => scrollToSection('tarifs')}
-              className="hidden sm:inline-flex px-4 py-2 text-xs font-bold bg-[#0F5132] hover:bg-[#0c4028] text-white rounded-lg shadow-2xs transition-colors cursor-pointer items-center gap-1.5"
+              className="hidden sm:inline-flex justify-center px-4 h-9 text-xs font-bold bg-[#0F5132] hover:bg-[#0c4028] text-white rounded-lg shadow-2xs transition-colors cursor-pointer items-center gap-1.5"
             >
               <Sparkles className="w-3.5 h-3.5 text-[#D4AF37]" />
               <span>Démarrer Gratuitement</span>
@@ -220,7 +240,7 @@ export function LandingPage({ onSelectPlanToSubscribe, onEnterDemoApp }: Landing
             {/* Mobile Hamburger Menu Toggle */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+              className="lg:hidden w-9 h-9 flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
               aria-label="Menu"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -238,22 +258,10 @@ export function LandingPage({ onSelectPlanToSubscribe, onEnterDemoApp }: Landing
               Fonctionnalités & Modules
             </button>
             <button
-              onClick={() => scrollToSection('avantages')}
-              className="w-full text-left py-2 px-3 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#0F5132]"
-            >
-              Avantages Afrique & OHADA
-            </button>
-            <button
               onClick={() => scrollToSection('tarifs')}
               className="w-full text-left py-2 px-3 rounded-lg text-xs font-bold text-[#0F5132] bg-emerald-50/60"
             >
               Tarifs (Gratuit, 5k, 7.5k, 10k FR CFA)
-            </button>
-            <button
-              onClick={() => scrollToSection('comparatif')}
-              className="w-full text-left py-2 px-3 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#0F5132]"
-            >
-              Matrice Comparative des Formules
             </button>
             <button
               onClick={() => scrollToSection('faq')}
@@ -261,23 +269,34 @@ export function LandingPage({ onSelectPlanToSubscribe, onEnterDemoApp }: Landing
             >
               Foire Aux Questions (FAQ)
             </button>
-            <button
-              onClick={() => scrollToSection('contact')}
-              className="w-full text-left py-2 px-3 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#0F5132]"
-            >
-              Support Régional & Contact
-            </button>
             <div className="pt-2 border-t border-slate-100 flex flex-col gap-2">
-              <button
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  onEnterDemoApp();
-                }}
-                className="w-full py-2.5 bg-slate-900 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-2"
-              >
-                <span>Connexion / Espace Entreprise</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </button>
+              {session ? (
+                <>
+                  <button
+                    onClick={() => { setMobileMenuOpen(false); onEnterApp?.(); }}
+                    className="w-full py-2.5 bg-slate-900 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-2"
+                  >
+                    <span>Mon espace ({session.name})</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => { setMobileMenuOpen(false); onLogout?.(); }}
+                    className="w-full py-2.5 border border-slate-300 text-slate-700 rounded-lg text-xs font-bold"
+                  >
+                    Déconnexion
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => { setMobileMenuOpen(false); onOpenLogin(); }}
+                    className="w-full py-2.5 bg-slate-900 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-2"
+                  >
+                    <Lock className="w-3.5 h-3.5" />
+                    <span>Connexion / Espace Entreprise</span>
+                  </button>
+                </>
+              )}
               <button
                 onClick={() => scrollToSection('tarifs')}
                 className="w-full py-2.5 bg-[#0F5132] text-white rounded-lg text-xs font-bold flex items-center justify-center gap-2"
@@ -297,7 +316,7 @@ export function LandingPage({ onSelectPlanToSubscribe, onEnterDemoApp }: Landing
             <div className="flex flex-col items-center justify-center gap-2">
               <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden bg-white p-1 border border-slate-200 shadow-md hover:scale-105 transition-transform">
                 <img
-                  src="/src/assets/images/gspme_logo.jpg"
+                  src="/gspme_logo.jpg"
                   alt="GSPME-ERP - Croissance connectée en Afrique"
                   referrerPolicy="no-referrer"
                   className="w-full h-full object-contain rounded-xl"
@@ -822,13 +841,6 @@ export function LandingPage({ onSelectPlanToSubscribe, onEnterDemoApp }: Landing
                   <td className="py-3 px-4 text-center"><Check className="w-4 h-4 text-[#0F5132] mx-auto" /></td>
                 </tr>
                 <tr>
-                  <td className="py-3 px-5">Assistant IA GSPME (Analyse financière)</td>
-                  <td className="py-3 px-4 text-center"><X className="w-4 h-4 text-slate-300 mx-auto" /></td>
-                  <td className="py-3 px-4 text-center"><X className="w-4 h-4 text-slate-300 mx-auto" /></td>
-                  <td className="py-3 px-4 text-center bg-emerald-50/30"><X className="w-4 h-4 text-slate-300 mx-auto" /></td>
-                  <td className="py-3 px-4 text-center"><Check className="w-4 h-4 text-[#0F5132] mx-auto" /></td>
-                </tr>
-                <tr>
                   <td className="py-3 px-5 font-semibold text-slate-900">Support Client & Formation</td>
                   <td className="py-3 px-4 text-center">Email & Centre d'aide</td>
                   <td className="py-3 px-4 text-center">WhatsApp (24h)</td>
@@ -1167,6 +1179,10 @@ export function LandingPage({ onSelectPlanToSubscribe, onEnterDemoApp }: Landing
                   />
                 </div>
 
+                {contactError && (
+                  <div role="alert" className="text-red-600 font-semibold">{contactError}</div>
+                )}
+
                 <button
                   type="submit"
                   className="w-full py-2.5 bg-[#0F5132] hover:bg-[#0c4028] text-white font-bold rounded-lg shadow-2xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
@@ -1189,7 +1205,7 @@ export function LandingPage({ onSelectPlanToSubscribe, onEnterDemoApp }: Landing
               <button onClick={scrollToTop} className="flex items-center gap-2.5 cursor-pointer text-left">
                 <div className="w-9 h-9 rounded-xl overflow-hidden bg-white p-0.5 border border-white/20 shadow-xs shrink-0">
                   <img
-                    src="/src/assets/images/gspme_logo.jpg"
+                    src="/gspme_logo.jpg"
                     alt="GSPME-ERP"
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-contain rounded-lg"

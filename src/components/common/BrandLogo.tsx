@@ -40,7 +40,7 @@ export function BrandLogo({
     xl: 'text-2xl',
   }[size];
 
-  const logoSrc = '/src/assets/images/gspme_logo.jpg';
+  const logoSrc = '/gspme_logo.jpg';
 
   return (
     <div

@@ -130,7 +130,6 @@ export const DEFAULT_PLANS: SubscriptionPlanConfig[] = [
       'projects',
       'documents',
       'bi',
-      'ai',
     ],
     features: [
       'Jusqu’à 50 utilisateurs & multi-établissements illimités',
@@ -139,7 +138,6 @@ export const DEFAULT_PLANS: SubscriptionPlanConfig[] = [
       'Gestion des Immobilisations & tableau d’amortissement',
       'GED complète (Gestion Électronique des Documents)',
       'Rapports décisionnels avancés & BI comparative',
-      'Assistant IA GSPME (détection d’anomalies & trésorerie)',
       'Sauvegardes certifiées horaires & isolation dédiée',
       'Accompagnement personnalisé & Account Manager dédié 24/7',
     ],
@@ -246,7 +244,7 @@ const INITIAL_SUPPORT_INQUIRIES: SupportInquiry[] = [
 ];
 
 class SubscriptionService {
-  private plansKey = 'gspme_saas_plans_config_v7';
+  private plansKey = 'gspme_saas_plans_config_v8';
   private ordersKey = 'gspme_subscription_orders_v3';
   private inquiriesKey = 'gspme_support_inquiries';
 
@@ -257,12 +255,8 @@ class SubscriptionService {
   private ensureInitialized() {
     try {
       const stored = localStorage.getItem(this.plansKey);
-      if (
-        !stored ||
-        !stored.includes('"monthlyPriceFCFA":5000') ||
-        !stored.includes('"monthlyPriceFCFA":7500') ||
-        !stored.includes('"monthlyPriceFCFA":10000')
-      ) {
+      // La clé est versionnée : on ne réinitialise que si absente (les prix modifiés par l'admin sont conservés)
+      if (!stored) {
         localStorage.setItem(this.plansKey, JSON.stringify(DEFAULT_PLANS));
       }
       if (!localStorage.getItem(this.ordersKey)) {
@@ -389,7 +383,7 @@ class SubscriptionService {
       name: params.companyName,
       tradeName: params.companyName,
       legalForm: params.legalForm,
-      logoUrl: params.logoUrl || '/src/assets/images/gspme_logo.jpg',
+      logoUrl: params.logoUrl || '/gspme_logo.jpg',
       countryCode: params.countryCode,
       taxNumber: params.taxNumber || `${countryPack.taxNumberLabel} En cours`,
       tradeRegisterNumber: params.tradeRegisterNumber || 'RCCM En cours',
@@ -649,6 +643,14 @@ class SubscriptionService {
       if (data) return JSON.parse(data);
     } catch {}
     return INITIAL_SUPPORT_INQUIRIES;
+  }
+
+  public updateInquiryStatus(id: string, status: SupportInquiry['status']): SupportInquiry[] {
+    const all = this.getSupportInquiries().map(i => (i.id === id ? { ...i, status } : i));
+    try {
+      localStorage.setItem(this.inquiriesKey, JSON.stringify(all));
+    } catch {}
+    return all;
   }
 
   public submitSupportInquiry(inquiry: Omit<SupportInquiry, 'id' | 'createdAt' | 'status'>): SupportInquiry {

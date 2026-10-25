@@ -30,17 +30,27 @@ interface TaxModuleProps {
 
 export function TaxModule({ tenant, invoices, purchases, userRole }: TaxModuleProps) {
   const [activeTab, setActiveTab] = useState<'tva' | 'calendrier'>('tva');
-  const [selectedMonth, setSelectedMonth] = useState('Mars 2026');
 
   const countryPack = COUNTRY_PACKS[tenant.countryCode];
 
+  // Mois disponibles (d'après les pièces comptabilisées) ; par défaut le plus récent
+  const monthOf = (d: string) => (d || '').slice(0, 7);
+  const availableMonths = Array.from(
+    new Set([...invoices.map(i => monthOf(i.date)), ...purchases.map(p => monthOf(p.date))].filter(m => /^\d{4}-\d{2}$/.test(m)))
+  ).sort().reverse();
+  const [selectedMonth, setSelectedMonth] = useState<string>(availableMonths[0] || 'ALL');
+  const monthLabel = (m: string) =>
+    m === 'ALL' ? 'Toutes périodes' : new Date(`${m}-01T00:00:00`).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+  const inSelectedMonth = (d: string) => selectedMonth === 'ALL' || monthOf(d) === selectedMonth;
+
   // TVA Computations
-  const salesInvoices = invoices.filter(i => i.type === 'FACTURE_VENTE' && i.status !== 'ANNULEE');
+  const salesInvoices = invoices.filter(i => i.type === 'FACTURE_VENTE' && i.status !== 'ANNULEE' && inSelectedMonth(i.date));
   const tvaCollectee = salesInvoices.reduce((acc, i) => acc + (i.totalVAT || 0), 0);
   const baseVentesHT = salesInvoices.reduce((acc, i) => acc + (i.subtotalHT || 0), 0);
 
-  const tvaDeductible = purchases.reduce((acc, p) => acc + (p.totalVAT || 0), 0);
-  const baseAchatsHT = purchases.reduce((acc, p) => acc + (p.totalHT || 0), 0);
+  const periodPurchases = purchases.filter(p => inSelectedMonth(p.date));
+  const tvaDeductible = periodPurchases.reduce((acc, p) => acc + (p.totalVAT || 0), 0);
+  const baseAchatsHT = periodPurchases.reduce((acc, p) => acc + (p.totalHT || 0), 0);
 
   const tvaNetteDue = Math.max(0, tvaCollectee - tvaDeductible);
   const creditTVA = tvaDeductible > tvaCollectee ? tvaDeductible - tvaCollectee : 0;
@@ -120,12 +130,24 @@ export function TaxModule({ tenant, invoices, purchases, userRole }: TaxModulePr
             <div className="flex items-center justify-between pb-3 border-b border-slate-200">
               <div>
                 <h3 className="text-sm font-bold text-slate-900">
-                  Bordereau Récapitulatif de TVA - {selectedMonth}
+                  Bordereau Récapitulatif de TVA - <span className="capitalize">{monthLabel(selectedMonth)}</span>
                 </h3>
                 <p className="text-slate-500 text-[11px]">
                   Direction Générale des Impôts et des Domaines ({countryPack.countryName})
                 </p>
               </div>
+              <div className="flex items-center gap-2">
+              <select
+                aria-label="Période de la déclaration"
+                value={selectedMonth}
+                onChange={e => setSelectedMonth(e.target.value)}
+                className="p-1.5 border border-slate-300 rounded text-xs bg-white capitalize"
+              >
+                <option value="ALL">Toutes périodes</option>
+                {availableMonths.map(m => (
+                  <option key={m} value={m}>{monthLabel(m)}</option>
+                ))}
+              </select>
               <button
                 onClick={() => PdfService.printCurrent()}
                 className="px-3 py-1.5 border border-slate-300 rounded text-slate-700 hover:bg-slate-100 flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
@@ -134,6 +156,7 @@ export function TaxModule({ tenant, invoices, purchases, userRole }: TaxModulePr
                 <Printer className="w-3.5 h-3.5" />
                 <span>Imprimer l'État Fiscal</span>
               </button>
+              </div>
             </div>
 
             <table className="w-full text-left border border-slate-200">

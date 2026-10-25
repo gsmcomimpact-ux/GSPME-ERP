@@ -29,7 +29,6 @@ import {
   Project,
   FixedAsset,
   StoredDocument,
-  AiInsight,
 } from '../types';
 import {
   INITIAL_TENANTS,
@@ -56,8 +55,8 @@ import {
   INITIAL_PROJECTS,
   INITIAL_FIXED_ASSETS,
   INITIAL_DOCUMENTS,
-  INITIAL_AI_INSIGHTS,
 } from '../data/initialData';
+import { api, type SyncSnapshot } from './api';
 
 const STORAGE_KEYS = {
   TENANTS: 'gspme_tenants_v2',
@@ -86,7 +85,6 @@ const STORAGE_KEYS = {
   PROJECTS: 'gspme_projects_v2',
   FIXED_ASSETS: 'gspme_fixed_assets_v2',
   DOCUMENTS: 'gspme_documents_v2',
-  AI_INSIGHTS: 'gspme_ai_insights_v2',
 };
 
 function getFromStorage<T>(key: string, defaultValue: T): T {
@@ -102,6 +100,9 @@ function getFromStorage<T>(key: string, defaultValue: T): T {
 function saveToStorage<T>(key: string, value: T): void {
   try {
     localStorage.setItem(key, JSON.stringify(value));
+    if (api.isEnabled()) {
+      api.schedulePush(key.replace(/^gspme_/, '').replace(/_v2$/, ''), () => getFromStorage(key, null));
+    }
   } catch (err) {
     console.error('Storage save error:', err);
   }
@@ -330,6 +331,20 @@ export class SaaSStorageService {
     this.notify();
   }
 
+  public updateProject(project: Project): void {
+    const all = getFromStorage(STORAGE_KEYS.PROJECTS, INITIAL_PROJECTS);
+    saveToStorage(STORAGE_KEYS.PROJECTS, all.map(p => (p.id === project.id ? project : p)));
+    this.notify();
+  }
+
+  public deleteProject(projectId: string): void {
+    const all = getFromStorage(STORAGE_KEYS.PROJECTS, INITIAL_PROJECTS);
+    const p = all.find(x => x.id === projectId);
+    saveToStorage(STORAGE_KEYS.PROJECTS, all.filter(x => x.id !== projectId));
+    this.logAudit('SUPPRESSION', 'PROJETS', `Suppression projet ${p?.title || projectId}`);
+    this.notify();
+  }
+
   public updateProjectProgress(projectId: string, progress: number): void {
     const all = getFromStorage(STORAGE_KEYS.PROJECTS, INITIAL_PROJECTS);
     const updated = all.map(p => (p.id === projectId ? { ...p, progressPercent: progress } : p));
@@ -358,21 +373,18 @@ export class SaaSStorageService {
     return all.filter(d => d.tenantId === targetId);
   }
 
+  public removeDocument(id: string): void {
+    const all = getFromStorage(STORAGE_KEYS.DOCUMENTS, INITIAL_DOCUMENTS);
+    const doc = all.find(d => d.id === id);
+    saveToStorage(STORAGE_KEYS.DOCUMENTS, all.filter(d => d.id !== id));
+    this.logAudit('SUPPRESSION', 'DOCUMENTS', `Suppression du document : ${doc?.title || id}`);
+    this.notify();
+  }
+
   public addDocument(doc: StoredDocument): void {
     const all = getFromStorage(STORAGE_KEYS.DOCUMENTS, INITIAL_DOCUMENTS);
     saveToStorage(STORAGE_KEYS.DOCUMENTS, [doc, ...all]);
     this.logAudit('CREATION', 'DOCUMENTS', `Archivage document : ${doc.title}`);
-    this.notify();
-  }
-
-  // MODULE O — AI Insights
-  public getAiInsights(): AiInsight[] {
-    return getFromStorage(STORAGE_KEYS.AI_INSIGHTS, INITIAL_AI_INSIGHTS);
-  }
-
-  public addAiInsight(insight: AiInsight): void {
-    const all = getFromStorage(STORAGE_KEYS.AI_INSIGHTS, INITIAL_AI_INSIGHTS);
-    saveToStorage(STORAGE_KEYS.AI_INSIGHTS, [insight, ...all]);
     this.notify();
   }
 
@@ -582,7 +594,41 @@ export class SaaSStorageService {
     saveToStorage(STORAGE_KEYS.AUDIT_LOGS, [newLog, ...all].slice(0, 300));
   }
 
+  /** Remplace le cache local par l'instantané du tenant renvoyé par le serveur (sans écho vers l'API). */
+  public hydrateFromServer(snapshot: SyncSnapshot): void {
+    this.clearLocal();
+    const put = (key: string, value: unknown) => localStorage.setItem(key, JSON.stringify(value));
+    put(STORAGE_KEYS.TENANTS, snapshot.tenants);
+    put(STORAGE_KEYS.USERS, snapshot.users);
+    put(STORAGE_KEYS.ACTIVE_TENANT_ID, snapshot.activeTenantId);
+    put(STORAGE_KEYS.ACTIVE_USER_ID, snapshot.activeUserId);
+    for (const [name, rows] of Object.entries(snapshot.collections)) {
+      const key = `gspme_${name}_v2`;
+      if (Object.values(STORAGE_KEYS).includes(key)) put(key, rows);
+    }
+    this.notify();
+  }
+
+  /** Vide le cache local (déconnexion). */
+  public clearLocal(): void {
+    Object.values(STORAGE_KEYS).forEach(k => localStorage.removeItem(k));
+  }
+
+  /** Déconnexion : vide le cache local (données de l'entreprise) et réactive l'état de démonstration. */
+  public logoutReset(): void {
+    this.clearLocal();
+    this.notify();
+  }
+
+  public async refreshFromServer(): Promise<void> {
+    this.hydrateFromServer(await api.fetchSnapshot());
+  }
+
   public resetData(): void {
+    if (api.isEnabled()) {
+      console.warn('Réinitialisation désactivée en mode connecté (données serveur).');
+      return;
+    }
     Object.values(STORAGE_KEYS).forEach(k => localStorage.removeItem(k));
     this.notify();
   }

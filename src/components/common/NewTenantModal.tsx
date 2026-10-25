@@ -70,7 +70,7 @@ export function NewTenantModal({ isOpen, onClose, onTenantCreated }: NewTenantMo
       id: newId,
       name,
       legalForm,
-      logoUrl: logoUrl || '/src/assets/images/gspme_logo.jpg',
+      logoUrl: logoUrl || '/gspme_logo.jpg',
       countryCode,
       taxNumber: taxNumber || `${pack.taxNumberLabel} 000${Math.floor(100000 + Math.random() * 900000)}`,
       tradeRegisterNumber: tradeRegisterNumber || `${pack.tradeRegisterLabel} 2026-B-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -86,7 +86,7 @@ export function NewTenantModal({ isOpen, onClose, onTenantCreated }: NewTenantMo
       maxStorageMB: 10240,
       activeModules: [
         'dashboard', 'crm', 'sales', 'purchases', 'inventory', 'pos',
-        'accounting', 'treasury', 'payroll', 'projects', 'assets', 'documents', 'bi', 'ai', 'admin'
+        'accounting', 'treasury', 'payroll', 'projects', 'assets', 'documents', 'bi', 'admin'
       ],
       currentBranchId: branchId,
       branches: [
@@ -204,6 +204,26 @@ export function NewTenantModal({ isOpen, onClose, onTenantCreated }: NewTenantMo
               value={phone}
               onChange={e => setPhone(e.target.value)}
               required
+              className="w-full p-2 border border-slate-300 rounded-lg"
+            />
+          </div>
+          <div>
+            <label className="block font-semibold text-slate-700 mb-1">Email de l'entreprise</label>
+            <input
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="contact@entreprise.com"
+              className="w-full p-2 border border-slate-300 rounded-lg"
+            />
+          </div>
+          <div>
+            <label className="block font-semibold text-slate-700 mb-1">Adresse du siège</label>
+            <input
+              type="text"
+              value={address}
+              onChange={e => setAddress(e.target.value)}
+              placeholder={`Avenue Principale, ${city}`}
               className="w-full p-2 border border-slate-300 rounded-lg"
             />
           </div>

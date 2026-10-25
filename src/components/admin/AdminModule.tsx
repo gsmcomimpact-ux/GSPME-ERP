@@ -25,6 +25,10 @@ import { Tenant, User, AuditLog, Role, SubscriptionPlanId } from '../../types';
 import { COUNTRY_PACKS, formatMoney } from '../../services/currency';
 import { Modal, SegmentedTabs } from '../common/UIComponents';
 import { storage } from '../../services/storage';
+import { api } from '../../services/api';
+import { exportAllData } from '../../services/dataExport';
+import { BillingPanel } from './BillingPanel';
+import { InvoiceTemplatePicker } from './InvoiceTemplatePicker';
 import { subscriptionService } from '../../services/subscriptionService';
 import { PdfService } from '../../services/pdfService';
 
@@ -34,6 +38,8 @@ interface AdminModuleProps {
   auditLogs: AuditLog[];
   currentUser: User;
   onSelectTenant: (id: string) => void;
+  /** Onglet à ouvrir (ex. « abonnements » depuis le bandeau d'échéance). */
+  initialTab?: 'societe' | 'utilisateurs' | 'abonnements' | 'audit';
 }
 
 export function AdminModule({
@@ -42,14 +48,16 @@ export function AdminModule({
   auditLogs,
   currentUser,
   onSelectTenant,
+  initialTab = 'societe',
 }: AdminModuleProps) {
-  const [activeTab, setActiveTab] = useState<'societe' | 'utilisateurs' | 'abonnements' | 'audit'>('societe');
+  const [activeTab, setActiveTab] = useState<'societe' | 'utilisateurs' | 'abonnements' | 'audit'>(initialTab);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 4000);
   };
+  const [exporting, setExporting] = useState(false);
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [newBranchModalOpen, setNewBranchModalOpen] = useState(false);
 
@@ -87,6 +95,7 @@ export function AdminModule({
   const [inviteName, setInviteName] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<Role>('COMMERCIAL_VENTES');
+  const [invitePassword, setInvitePassword] = useState('');
 
   // New Branch State
   const [branchName, setBranchName] = useState('');
@@ -112,8 +121,22 @@ export function AdminModule({
     showToast('Informations de la société et logo mis à jour avec succès.');
   };
 
-  const handleInviteUser = (e: React.FormEvent) => {
+  const handleInviteUser = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (api.isEnabled()) {
+      // Mode serveur : le compte (avec mot de passe) est créé côté API, puis le cache est resynchronisé.
+      try {
+        await api.createUser({ name: inviteName, email: inviteEmail, password: invitePassword, role: inviteRole });
+        await storage.refreshFromServer();
+        setInviteModalOpen(false);
+        setInviteName('');
+        setInviteEmail('');
+        setInvitePassword('');
+      } catch (err) {
+        alert((err as Error).message);
+      }
+      return;
+    }
     const newUser: User = {
       id: `user-${Date.now()}`,
       name: inviteName,
@@ -415,6 +438,14 @@ export function AdminModule({
       )}
 
       {/* TAB: Utilisateurs & RBAC */}
+      {activeTab === 'societe' && (
+        <InvoiceTemplatePicker
+          tenant={tenant}
+          readOnly={currentUser.role === 'AUDITEUR_EXTERNE'}
+          onChanged={name => showToast(`Modèle « ${name} » activé pour vos factures et devis.`)}
+        />
+      )}
+
       {activeTab === 'utilisateurs' && (
         <div className="bg-white rounded-xl border border-slate-200/80 shadow-2xs overflow-hidden">
           <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-xs">
@@ -478,44 +509,40 @@ export function AdminModule({
                 <span className="text-slate-500 font-medium">Cycle {tenant.billingCycle || 'MENSUEL'}</span>
               </div>
               <h3 className="text-lg font-black text-slate-900 mt-1">
-                Formule {tenant.subscriptionPlan} — {formatMoney(tenant.monthlySubscriptionAmount || 15000, tenant.currency)} / mois
+                Formule {tenant.subscriptionPlan} — {formatMoney(tenant.monthlySubscriptionAmount ?? 5000, tenant.currency)} / mois
               </h3>
               <p className="text-slate-500 text-[11px] mt-0.5">
-                Valide jusqu'au {tenant.subscriptionExpiresAt ? new Date(tenant.subscriptionExpiresAt).toLocaleDateString('fr-FR') : '31/12/2026'} · Renouvellement automatique par Mobile Money / Carte
+                Valide jusqu'au {tenant.subscriptionExpiresAt ? new Date(tenant.subscriptionExpiresAt).toLocaleDateString('fr-FR') : '31/12/2026'} · Renouvellement manuel avant l'échéance (Mobile Money / Carte)
               </p>
             </div>
 
             <div className="flex items-center gap-2">
               <button
-                onClick={() => {
-                  const dataToExport = {
-                    tenant,
-                    customers: storage.getCustomers(tenant.id),
-                    invoices: storage.getInvoices(tenant.id),
-                    purchases: storage.getPurchases(tenant.id),
-                    products: storage.getProducts(tenant.id),
-                    accounts: storage.getTreasuryAccounts(tenant.id),
-                    exportDate: new Date().toISOString(),
-                  };
-                  const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = `gspme_export_${tenant.name.toLowerCase().replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.json`;
-                  document.body.appendChild(a);
-                  a.click();
-                  document.body.removeChild(a);
-                  URL.revokeObjectURL(url);
+                onClick={async () => {
+                  setExporting(true);
+                  try {
+                    const r = await exportAllData(tenant);
+                    showToast(`Export terminé : ${r.files} fichiers, ${r.records} enregistrements (archive ZIP téléchargée).`);
+                  } catch (err) {
+                    showToast(`Export impossible : ${(err as Error).message}`);
+                  } finally {
+                    setExporting(false);
+                  }
                 }}
-                className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg flex items-center gap-1.5 cursor-pointer transition-colors"
-                title="Exporter l'intégralité des données de l'entreprise (Réversibilité contractuelle)"
+                disabled={exporting}
+                className="px-3 py-2 bg-slate-100 hover:bg-slate-200 disabled:opacity-60 text-slate-700 font-semibold rounded-lg flex items-center gap-1.5 cursor-pointer transition-colors"
+                title="Archive ZIP : un CSV par domaine (ouvrable dans Excel) + toutes les données en JSON (réversibilité contractuelle)"
               >
                 <Download className="w-3.5 h-3.5" />
-                <span>Exporter toutes mes données</span>
+                <span>{exporting ? 'Préparation…' : 'Exporter toutes mes données (ZIP)'}</span>
               </button>
             </div>
           </div>
 
+          {api.isEnabled() ? (
+            <BillingPanel tenant={tenant} currentUser={currentUser} showToast={showToast} />
+          ) : (
+            <>
           {/* Grille des 4 Formules Configurables avec Bouton Changement d'Offre */}
           <div>
             <h4 className="font-bold text-slate-900 mb-2">Changer ou Mettre à Niveau votre Offre</h4>
@@ -568,7 +595,7 @@ export function AdminModule({
                         </div>
                       ) : (
                         <button
-                          onClick={() => {
+                          onClick={async () => {
                             subscriptionService.changeSubscriptionPlan(tenant.id, plan.id);
                             showToast(`Votre formule a été mise à jour avec succès vers ${plan.name} !`);
                           }}
@@ -645,6 +672,8 @@ export function AdminModule({
               </table>
             </div>
           </div>
+            </>
+          )}
         </div>
       )}
 
@@ -731,6 +760,21 @@ export function AdminModule({
               className="w-full p-2 border border-slate-300 rounded-lg"
             />
           </div>
+
+          {api.isEnabled() && (
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">Mot de passe initial * (8 caractères min.)</label>
+              <input
+                type="password"
+                value={invitePassword}
+                onChange={e => setInvitePassword(e.target.value)}
+                minLength={8}
+                required
+                autoComplete="new-password"
+                className="w-full p-2 border border-slate-300 rounded-lg"
+              />
+            </div>
+          )}
 
           <div>
             <label className="block font-semibold text-slate-700 mb-1">Rôle Attribué (Permissions RBAC) *</label>
