@@ -4,6 +4,8 @@
  * GSPME - Application Principale SaaS ERP pour PME Africaines (Modules Complets A à P)
  */
 
+import { checkoutLinkFor } from '../shared/paymentLinks';
+import { isPaidPlan } from '../shared/plans';
 import React, { useState, useEffect } from 'react';
 import { storage } from './services/storage';
 import { api } from './services/api';
@@ -264,6 +266,11 @@ export default function App() {
       <div className="min-h-screen bg-[#FAF9F6] text-[#1F2937]">
         <LandingPage
           onSelectPlanToSubscribe={(planId, cycle) => {
+            if (serverMode && isPaidPlan(planId)) {
+              // Client déjà connecté : direction Chariow pour le paiement
+              window.location.href = checkoutLinkFor(planId, cycle);
+              return;
+            }
             if (serverAvailable && !serverMode) {
               // Avec le serveur : création d'un vrai compte (essai 14 jours), formule activée ensuite
               setPendingPlan(planId);

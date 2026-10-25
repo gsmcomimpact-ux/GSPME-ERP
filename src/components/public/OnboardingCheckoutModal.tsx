@@ -27,12 +27,13 @@ import {
 import {
   SubscriptionPlanId,
   BillingCycle,
-  PaymentGatewayType,
   CountryCode,
   Tenant,
   User,
   SubscriptionOrder,
 } from '../../types';
+import { checkoutLinkFor } from '../../../shared/paymentLinks';
+import { isPaidPlan } from '../../../shared/plans';
 import { subscriptionService } from '../../services/subscriptionService';
 import { COUNTRY_PACKS, formatMoney } from '../../services/currency';
 
@@ -91,11 +92,6 @@ export function OnboardingCheckoutModal({
   };
 
   // Étape 3 : Paiement
-  const [paymentMethod, setPaymentMethod] = useState<PaymentGatewayType>('WAVE');
-  const [paymentPhoneNumber, setPaymentPhoneNumber] = useState('');
-  const [cardNumber, setCardNumber] = useState('');
-  const [cardExpiry, setCardExpiry] = useState('');
-  const [cardCvc, setCardCvc] = useState('');
 
   // Traitement
   const [isProcessing, setIsProcessing] = useState(false);
@@ -131,6 +127,11 @@ export function OnboardingCheckoutModal({
   };
 
   const handleProcessPayment = async () => {
+    if (priceHT > 0 && isPaidPlan(selectedPlanId)) {
+      // Formule payante : le client est dirigé vers Chariow uniquement pour le paiement
+      window.location.href = checkoutLinkFor(selectedPlanId, billingCycle);
+      return;
+    }
     setIsProcessing(true);
     setErrorMsg('');
 
@@ -153,8 +154,8 @@ export function OnboardingCheckoutModal({
         adminPhone,
         adminPassword,
         logoUrl: logoUrl || undefined,
-        paymentMethod: priceHT === 0 ? 'GRATUIT' : paymentMethod,
-        paymentPhoneNumber: priceHT === 0 ? undefined : (paymentPhoneNumber || adminPhone),
+        paymentMethod: 'GRATUIT',
+        paymentPhoneNumber: undefined,
       });
 
       setCompletedOrder(result.order);
@@ -584,122 +585,13 @@ export function OnboardingCheckoutModal({
                   </div>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  <span className="font-bold text-slate-900 block text-xs">
-                    Sélectionnez votre moyen de paiement sécurisé :
-                  </span>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod('WAVE')}
-                      className={`p-3 rounded-xl border text-center transition-all cursor-pointer ${
-                        paymentMethod === 'WAVE'
-                          ? 'border-[#0F5132] bg-emerald-50/50 text-[#0F5132] font-bold shadow-2xs'
-                          : 'border-slate-200 hover:border-slate-300 text-slate-700'
-                      }`}
-                    >
-                      <Smartphone className="w-4 h-4 mx-auto mb-1 text-blue-500" />
-                      <div>Wave Mobile</div>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod('ORANGE_MONEY')}
-                      className={`p-3 rounded-xl border text-center transition-all cursor-pointer ${
-                        paymentMethod === 'ORANGE_MONEY'
-                          ? 'border-[#0F5132] bg-emerald-50/50 text-[#0F5132] font-bold shadow-2xs'
-                          : 'border-slate-200 hover:border-slate-300 text-slate-700'
-                      }`}
-                    >
-                      <Smartphone className="w-4 h-4 mx-auto mb-1 text-orange-500" />
-                      <div>Orange Money</div>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod('MTN_MOMO')}
-                      className={`p-3 rounded-xl border text-center transition-all cursor-pointer ${
-                        paymentMethod === 'MTN_MOMO'
-                          ? 'border-[#0F5132] bg-emerald-50/50 text-[#0F5132] font-bold shadow-2xs'
-                          : 'border-slate-200 hover:border-slate-300 text-slate-700'
-                      }`}
-                    >
-                      <Smartphone className="w-4 h-4 mx-auto mb-1 text-yellow-600" />
-                      <div>MTN MoMo</div>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod('CARTE_BANCAIRE')}
-                      className={`p-3 rounded-xl border text-center transition-all cursor-pointer ${
-                        paymentMethod === 'CARTE_BANCAIRE'
-                          ? 'border-[#0F5132] bg-emerald-50/50 text-[#0F5132] font-bold shadow-2xs'
-                          : 'border-slate-200 hover:border-slate-300 text-slate-700'
-                      }`}
-                    >
-                      <CreditCard className="w-4 h-4 mx-auto mb-1 text-slate-700" />
-                      <div>Carte Visa/GIM</div>
-                    </button>
-                  </div>
-
-                  {/* Saisie spécifique au moyen de paiement */}
-                  {(paymentMethod === 'WAVE' || paymentMethod === 'ORANGE_MONEY' || paymentMethod === 'MTN_MOMO' || paymentMethod === 'MOOV_MONEY') && (
-                    <div className="p-4 bg-white rounded-xl border border-slate-200 space-y-2">
-                      <label className="block font-semibold text-slate-700">
-                        Numéro de téléphone du compte {paymentMethod} *
-                      </label>
-                      <input
-                        type="tel"
-                        value={paymentPhoneNumber}
-                        onChange={e => setPaymentPhoneNumber(e.target.value)}
-                        placeholder={adminPhone || '+221 77 000 00 00'}
-                        className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-[#0F5132]"
-                      />
-                      <div className="text-[11px] text-slate-500 flex items-center gap-1">
-                        <Lock className="w-3 h-3 text-[#0F5132]" />
-                        <span>Une demande de validation push sera transmise à votre application mobile.</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {paymentMethod === 'CARTE_BANCAIRE' && (
-                    <div className="p-4 bg-white rounded-xl border border-slate-200 space-y-3">
-                      <div>
-                        <label className="block font-semibold text-slate-700 mb-1">Numéro de carte bancaire</label>
-                        <input
-                          type="text"
-                          value={cardNumber}
-                          onChange={e => setCardNumber(e.target.value)}
-                          placeholder="4152 •••• •••• 9840"
-                          className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-[#0F5132]"
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="block font-semibold text-slate-700 mb-1">Expiration</label>
-                          <input
-                            type="text"
-                            value={cardExpiry}
-                            onChange={e => setCardExpiry(e.target.value)}
-                            placeholder="MM/AA"
-                            className="w-full px-3 py-2 rounded-lg border border-slate-200"
-                          />
-                        </div>
-                        <div>
-                          <label className="block font-semibold text-slate-700 mb-1">CVC / CVV</label>
-                          <input
-                            type="password"
-                            maxLength={4}
-                            value={cardCvc}
-                            onChange={e => setCardCvc(e.target.value)}
-                            placeholder="•••"
-                            className="w-full px-3 py-2 rounded-lg border border-slate-200"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                <div className="p-5 bg-slate-50 rounded-xl border border-slate-200 text-center space-y-2">
+                  <Lock className="w-6 h-6 text-[#0F5132] mx-auto" />
+                  <p className="font-bold text-slate-900 text-sm">Paiement sécurisé sur Chariow</p>
+                  <p className="text-slate-600 leading-relaxed">
+                    Vous allez être redirigé vers la page de paiement Chariow (Wave, Orange Money, MTN, Moov, carte bancaire).
+                    Aucune donnée de paiement n'est saisie sur GSPME.
+                  </p>
                 </div>
               )}
 
@@ -733,7 +625,7 @@ export function OnboardingCheckoutModal({
                   ) : (
                     <>
                       <Lock className="w-4 h-4" />
-                      <span>Régler {formatMoney(priceTTC, countryPack.currency)} & Activer</span>
+                      <span>Payer sur Chariow ({formatMoney(priceTTC, countryPack.currency)})</span>
                     </>
                   )}
                 </button>

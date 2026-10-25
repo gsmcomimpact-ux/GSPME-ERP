@@ -8,6 +8,7 @@ import { api, type Payment } from '../../services/api';
 import { storage } from '../../services/storage';
 import { formatMoney } from '../../services/currency';
 import { subscriptionService } from '../../services/subscriptionService';
+import { checkoutLinkFor } from '../../../shared/paymentLinks';
 import { PAID_PLANS, PLAN_CATALOG, priceOf, type Cycle, type PaidPlanId } from '../../../shared/plans';
 import { Modal } from '../common/UIComponents';
 
@@ -26,8 +27,7 @@ const STATUS_LABEL: Record<Payment['status'], { label: string; cls: string }> = 
 };
 
 export function BillingPanel({ tenant, currentUser, showToast }: BillingPanelProps) {
-  const [billingEnabled, setBillingEnabled] = useState<boolean | null>(null);
-  const [cycle, setCycle] = useState<Cycle>('MENSUEL');
+    const [cycle, setCycle] = useState<Cycle>('MENSUEL');
   const [payments, setPayments] = useState<Payment[]>([]);
   const [selected, setSelected] = useState<PaidPlanId | null>(null);
   const [phone, setPhone] = useState(tenant.phone || '');
@@ -45,7 +45,6 @@ export function BillingPanel({ tenant, currentUser, showToast }: BillingPanelPro
   const loadPayments = () => api.listPayments().then(setPayments).catch(() => undefined);
 
   useEffect(() => {
-    api.isBillingEnabled().then(setBillingEnabled);
     loadPayments();
   }, []);
 
@@ -89,25 +88,12 @@ export function BillingPanel({ tenant, currentUser, showToast }: BillingPanelPro
     try {
       const { checkoutUrl } = await api.startCheckout({ plan: selected, cycle, phone });
       window.location.href = checkoutUrl;
-    } catch (err) {
-      setError((err as Error).message);
-      setBusy(false);
+    } catch {
+      // Le client est dirigé vers Chariow dans tous les cas : la page de paiement ne dépend pas de ce serveur
+      window.location.href = checkoutLinkFor(selected, cycle);
     }
   };
 
-  const requestChange = async (plan: PaidPlanId) => {
-    // Paiement en ligne non configuré : demande transmise à l'équipe GSPME
-    try {
-      await api.submitContact({
-        name: currentUser.name, email: currentUser.email, phone: tenant.phone, company: tenant.name, country: tenant.countryCode,
-        subject: `Changement de formule : ${tenant.subscriptionPlan} → ${plan}`,
-        message: `L'entreprise ${tenant.name} (${tenant.id}) demande le passage à la formule ${PLAN_CATALOG[plan].name}.`,
-      });
-      showToast(`Demande de passage à ${PLAN_CATALOG[plan].name} envoyée à l'équipe GSPME.`);
-    } catch (err) {
-      showToast((err as Error).message);
-    }
-  };
 
   return (
     <div className="space-y-5">
@@ -151,11 +137,6 @@ export function BillingPanel({ tenant, currentUser, showToast }: BillingPanelPro
         </div>
       )}
 
-      {billingEnabled === false && (
-        <div className="px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs">
-          Le paiement en ligne n'est pas encore activé : le changement de formule se fait sur demande auprès de l'équipe GSPME.
-        </div>
-      )}
       {!canPay && (
         <div className="px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-600 text-xs">
           Seule la direction de l'entreprise peut souscrire ou renouveler un abonnement.
@@ -190,13 +171,12 @@ export function BillingPanel({ tenant, currentUser, showToast }: BillingPanelPro
                 disabled={!canPay}
                 onClick={() => {
                   setError('');
-                  if (billingEnabled) setSelected(id);
-                  else requestChange(id);
+                  setSelected(id);
                 }}
                 className="mt-4 w-full py-2 bg-[#0F5132] hover:bg-[#0c4028] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <CreditCard className="w-3.5 h-3.5" />
-                {billingEnabled ? (isCurrent ? 'Renouveler' : `Payer ${spec.name}`) : `Demander ${spec.name}`}
+                {isCurrent ? 'Renouveler' : `Payer ${spec.name}`}
               </button>
             </div>
           );

@@ -4,6 +4,7 @@
  */
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { type Cycle, type PaidPlanId } from '../shared/plans.ts';
+import { CHARIOW_PRODUCTS, CHARIOW_STORE_URL } from '../shared/paymentLinks.ts';
 
 export const chariowConfig = () => ({
   apiUrl: (process.env.CHARIOW_API_URL || 'https://api.chariow.com/v1').trim().replace(/\/+$/, ''),
@@ -12,17 +13,7 @@ export const chariowConfig = () => ({
   appUrl: (process.env.APP_URL || '').trim().replace(/\/+$/, ''),
 });
 
-/** Pages de paiement Chariow de la boutique GSPME (publiques) : valeurs par défaut, surchargeables par variables d'environnement. */
-const STORE_URL = 'https://eflaptzj.mychariow.co';
-const DEFAULTS: Record<string, string> = {
-  ESSENTIEL_MENSUEL: 'prd_7x83esog',
-  ESSENTIEL_ANNUEL: 'prd_ikzmqpx3',
-  BUSINESS_MENSUEL: 'prd_37f4qhkp',
-  BUSINESS_ANNUEL: 'prd_cbq1etzr',
-  PREMIUM_MENSUEL: 'prd_n51v447e',
-  PREMIUM_ANNUEL: 'prd_snzlt3f6',
-};
-
+const DEFAULTS: Record<string, string> = CHARIOW_PRODUCTS;
 const defaultProduct = (k: string): string => (process.env.CHARIOW_NO_DEFAULTS ? '' : DEFAULTS[k] || '');
 
 /** Identifiant Chariow (prd_…) du produit « Licence » correspondant à une formule et un cycle. */
@@ -34,7 +25,7 @@ export const linkFor = (plan: PaidPlanId, cycle: Cycle): string => {
   const v = (process.env[`CHARIOW_LINK_${plan}_${cycle}`] || '').trim().replace(/^["']|["']$/g, '');
   if (/^https:\/\//i.test(v)) return v;
   const id = defaultProduct(`${plan}_${cycle}`);
-  return id ? `${STORE_URL}/${id}/checkout` : '';
+  return id ? `${CHARIOW_STORE_URL}/${id}/checkout` : '';
 };
 export const hasAnyLink = (): boolean =>
   (['ESSENTIEL', 'BUSINESS', 'PREMIUM'] as PaidPlanId[]).some(p => (['MENSUEL', 'ANNUEL'] as Cycle[]).some(c => !!linkFor(p, c)));
