@@ -40,3 +40,9 @@ Puis faites un vrai paiement du plus petit produit avec une entreprise de test.
 - Le serveur vérifie produit, montant et devise avant d'activer. Les anomalies sont visibles par le Super Admin (statut « À vérifier »).
 - Si votre serveur est injoignable pendant 5 tentatives, Chariow **désactive le Pulse** : réactivez-le dans Chariow (onglet Livraisons → Rejouer).
 - Un remboursement fait dans Chariow ne retire pas automatiquement la formule : le Super Admin peut la modifier ou suspendre l'entreprise.
+
+## Dépannage : « le lien de paiement ne marche pas »
+
+1. Ouvrez `https://VOTRE-SITE/api/health` : le champ `billingMode` indique `api`, `liens` ou `inactif`, et `billingMissing` liste les variables manquantes (`CHARIOW_API_KEY`, `CHARIOW_WEBHOOK_SECRET`).
+2. Pour l'API : définissez `CHARIOW_API_KEY`, `CHARIOW_WEBHOOK_SECRET`, `APP_URL` et les 6 variables `CHARIOW_PRODUCT_<FORMULE>_<CYCLE>` (identifiants `prd_…`, produits **publiés** de type Licence), puis **Restart**.
+3. **Solution de repli — lien direct** : pour chaque formule, définissez `CHARIOW_LINK_<FORMULE>_<CYCLE>` avec l'adresse (https) de la page du produit dans votre boutique, par ex. `CHARIOW_LINK_BUSINESS_MENSUEL=https://eflaptzj.mychariow.co/...`. Le bouton « Payer » ouvre alors cette page quand l'API n'est pas configurée ou renvoie une erreur. Dans ce mode l'activation n'est pas automatique : elle se confirme depuis Super Admin SaaS après vérification du paiement dans Chariow.

@@ -9,7 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { APP_DIR, all, dbConfigHint, initDb, maskDbMessage, one, run, socketDiagnostic, transaction } from './db.ts';
 import { adminListPayments, listPayments, runExpiry, startCheckout, webhookHandler } from './billing.ts';
-import { isBillingEnabled } from './chariow.ts';
+import { chariowConfig, hasAnyLink, isBillingEnabled } from './chariow.ts';
 import { deleteFile, downloadFile, filesUsage, uploadFile } from './files.ts';
 import { MAX_FILE_BYTES } from '../shared/documents.ts';
 import {
@@ -114,7 +114,9 @@ app.get('/api/health', (_req, res) => {
     service: 'gspme-saas',
     db: dbReady,
     ...(dbReady ? {} : { dbError: dbErrorCode || 'INITIALISATION', dbHint: dbConfigHint(), dbMessage: dbErrorMessage, dbSockets: socketDiagnostic() }), // codes et valeurs masquées seulement
-    billing: isBillingEnabled(),
+    billing: isBillingEnabled() || hasAnyLink(),
+    billingMode: isBillingEnabled() ? 'api' : hasAnyLink() ? 'liens' : 'inactif',
+    ...(isBillingEnabled() ? {} : { billingMissing: [!chariowConfig().apiKey && 'CHARIOW_API_KEY', !chariowConfig().webhookSecret && 'CHARIOW_WEBHOOK_SECRET'].filter(Boolean) }),
     time: new Date().toISOString(),
   });
 });

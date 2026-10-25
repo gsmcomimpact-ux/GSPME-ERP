@@ -276,6 +276,31 @@ test('paiement : erreurs Chariow et paiement non configuré', async () => {
   assert.equal((await (await fetch(base + '/health')).json()).billing, true);
 });
 
+test('paiement : lien direct Chariow en repli (API absente ou en erreur)', async () => {
+  const { token } = await registerCI('co3');
+  process.env.CHARIOW_LINK_BUSINESS_MENSUEL = 'https://boutique.example/prd_direct';
+  // 1) API en erreur 401 -> repli sur le lien direct
+  chariowMode = 'unauthorized';
+  let r = await call('POST', '/billing/checkout', { plan: 'BUSINESS', cycle: 'MENSUEL' }, token);
+  chariowMode = 'ok';
+  assert.equal(r.status, 201);
+  assert.equal(r.body.checkoutUrl, 'https://boutique.example/prd_direct');
+  assert.equal(r.body.manual, true);
+  // 2) pas de clé API du tout -> le lien direct reste utilisable
+  const savedKey = process.env.CHARIOW_API_KEY;
+  delete process.env.CHARIOW_API_KEY;
+  r = await call('POST', '/billing/checkout', { plan: 'BUSINESS', cycle: 'MENSUEL' }, token);
+  assert.equal(r.status, 201);
+  const health = await (await fetch(base + '/health')).json();
+  assert.equal(health.billing, true);
+  assert.equal(health.billingMode, 'liens');
+  assert.deepEqual(health.billingMissing, ['CHARIOW_API_KEY']);
+  // 3) formule sans lien ni clé -> refus clair
+  assert.equal((await call('POST', '/billing/checkout', { plan: 'PREMIUM', cycle: 'MENSUEL' }, token)).status, 503);
+  process.env.CHARIOW_API_KEY = savedKey;
+  delete process.env.CHARIOW_LINK_BUSINESS_MENSUEL;
+});
+
 test('webhook : signature obligatoire, activation, doublon et renouvellement', async () => {
   const { token } = await registerCI('wh1');
   const { r, row } = await startPay(token, 'BUSINESS', 'MENSUEL');

@@ -10,7 +10,7 @@ import type { NextFunction, Request, Response } from 'express';
 import { all, one, run, transaction } from './db.ts';
 import type { AuthedRequest } from './auth.ts';
 import {
-  ChariowError, chariowConfig, createCheckout, isBillingEnabled, productIdFor, verifySignature,
+  ChariowError, chariowConfig, createCheckout, hasAnyLink, isBillingEnabled, linkFor, productIdFor, verifySignature,
 } from './chariow.ts';
 import { PLAN_CATALOG, addPeriod, isCycle, isPaidPlan, priceOf, type Cycle, type PaidPlanId } from '../shared/plans.ts';
 
@@ -44,13 +44,15 @@ export async function startCheckout(req: Request, res: Response) {
   const user = await one<UserRow>('SELECT * FROM users WHERE id = ?', [auth.sub]);
   if (!user || !user.active) { res.status(401).json({ error: 'Compte désactivé' }); return; }
   if (user.role !== 'DIRECTEUR_GENERAL') { res.status(403).json({ error: 'Seule la direction peut souscrire un abonnement' }); return; }
-  if (!isBillingEnabled()) { res.status(503).json({ error: "Le paiement en ligne n'est pas encore activé sur cette plateforme." }); return; }
+  const apiReady = isBillingEnabled();
+  if (!apiReady && !hasAnyLink()) { res.status(503).json({ error: "Le paiement en ligne n'est pas encore activé sur cette plateforme." }); return; }
 
   const plan = req.body?.plan;
   const cycle = req.body?.cycle;
   if (!isPaidPlan(plan) || !isCycle(cycle)) { res.status(400).json({ error: 'Formule ou cycle invalide' }); return; }
   const productId = productIdFor(plan, cycle);
-  if (!productId) { res.status(503).json({ error: `Paiement non configuré pour la formule ${PLAN_CATALOG[plan].name} (${cycle.toLowerCase()}).` }); return; }
+  const directLink = linkFor(plan, cycle);
+  if ((!productId && !directLink) || (!apiReady && !directLink)) { res.status(503).json({ error: `Paiement non configuré pour la formule ${PLAN_CATALOG[plan].name} (${cycle.toLowerCase()}).` }); return; }
 
   const tenant = await getTenant(user.tenant_id);
   if (!tenant) { res.status(404).json({ error: 'Entreprise introuvable' }); return; }
@@ -64,6 +66,13 @@ export async function startCheckout(req: Request, res: Response) {
   const paymentId = `pay-${randomUUID()}`;
   await run('INSERT INTO payments (id, tenant_id, user_email, plan, cycle, amount, currency) VALUES (?,?,?,?,?,?,?)',
     [paymentId, user.tenant_id, user.email, plan, cycle, amount, 'XOF']);
+
+  // Lien direct : pas d'API (ou produit non configuré) -> on ouvre la page de paiement Chariow, activation confirmée ensuite
+  const useLink = async (why: string) => {
+    await run("UPDATE payments SET note = ? WHERE id = ?", [`Lien direct Chariow (${why}) : activation à confirmer`, paymentId]);
+    res.status(201).json({ checkoutUrl: directLink, paymentId, manual: true });
+  };
+  if ((!apiReady || !productId) && directLink) { await useLink('API non configurée'); return; }
 
   const [first, ...rest] = user.name.trim().split(/\s+/);
   const { appUrl } = chariowConfig();
@@ -83,6 +92,7 @@ export async function startCheckout(req: Request, res: Response) {
     res.status(201).json({ checkoutUrl: result.checkoutUrl, paymentId });
   } catch (err) {
     const e = err as ChariowError;
+    if (directLink && (!e.status || e.status >= 500 || e.status === 401 || e.status === 404)) { await useLink(`API en erreur ${e.status || ''}`.trim()); return; }
     await run("UPDATE payments SET status = 'FAILED', note = ? WHERE id = ?", [String(e.message).slice(0, 250), paymentId]);
     res.status(e.status && e.status >= 400 && e.status < 600 ? e.status : 502).json({ error: e.message, fields: e.fields });
   }

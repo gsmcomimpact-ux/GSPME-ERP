@@ -16,6 +16,14 @@ export const chariowConfig = () => ({
 export const productIdFor = (plan: PaidPlanId, cycle: Cycle): string =>
   (process.env[`CHARIOW_PRODUCT_${plan}_${cycle}`] || '').trim();
 
+/** Lien de paiement direct (page produit Chariow) : solution de repli si l'API de checkout n'est pas configurée ou en panne. */
+export const linkFor = (plan: PaidPlanId, cycle: Cycle): string => {
+  const v = (process.env[`CHARIOW_LINK_${plan}_${cycle}`] || '').trim().replace(/^["']|["']$/g, '');
+  return /^https:\/\//i.test(v) ? v : '';
+};
+export const hasAnyLink = (): boolean =>
+  (['ESSENTIEL', 'BUSINESS', 'PREMIUM'] as PaidPlanId[]).some(p => (['MENSUEL', 'ANNUEL'] as Cycle[]).some(c => !!linkFor(p, c)));
+
 export const isBillingEnabled = (): boolean => {
   const c = chariowConfig();
   return !!(c.apiKey && c.webhookSecret);
