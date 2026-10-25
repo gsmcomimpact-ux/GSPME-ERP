@@ -152,11 +152,11 @@ export function LandingPage({ onSelectPlanToSubscribe, onEnterDemoApp, onOpenLog
     <div className="min-h-screen bg-[#FAF9F6] text-slate-800 font-sans selection:bg-[#0F5132] selection:text-white">
       {/* Top Navigation Header */}
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
           {/* Logo cliquable -> Retour en haut */}
           <button
             onClick={scrollToTop}
-            className="flex items-center gap-3 text-left group cursor-pointer focus:outline-hidden"
+            className="flex items-center gap-3 text-left group cursor-pointer focus:outline-hidden shrink-0"
             title="GSPME-ERP Accueil"
           >
             <div className="w-10 h-10 rounded-xl overflow-hidden bg-white p-0.5 border border-slate-200/90 shadow-2xs group-hover:scale-105 transition-transform shrink-0">
@@ -172,39 +172,39 @@ export function LandingPage({ onSelectPlanToSubscribe, onEnterDemoApp, onOpenLog
                 <span>GSPME</span>
                 <span className="text-[#D4AF37]">-ERP</span>
               </div>
-              <span className="text-[10px] text-slate-500 block -mt-0.5 font-medium">Croissance connectée en Afrique</span>
+              <span className="hidden sm:block text-[10px] text-slate-500 -mt-0.5 font-medium whitespace-nowrap">Croissance connectée en Afrique</span>
             </div>
           </button>
 
           {/* Desktop Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-6 text-xs font-semibold text-slate-600">
+          <nav className="hidden lg:flex flex-1 items-center justify-center gap-1 text-xs font-semibold text-slate-600">
             <button
               onClick={() => scrollToSection('fonctionnalites')}
-              className="hover:text-[#0F5132] transition-colors cursor-pointer py-1"
+              className="px-3.5 h-9 rounded-lg hover:bg-emerald-50 hover:text-[#0F5132] transition-colors cursor-pointer"
             >
               Fonctionnalités
             </button>
             <button
               onClick={() => scrollToSection('tarifs')}
-              className="hover:text-[#0F5132] transition-colors cursor-pointer py-1 font-bold text-slate-900"
+              className="px-3.5 h-9 rounded-lg hover:bg-emerald-50 hover:text-[#0F5132] transition-colors cursor-pointer"
             >
               Tarifs & Offres
             </button>
             <button
               onClick={() => scrollToSection('faq')}
-              className="hover:text-[#0F5132] transition-colors cursor-pointer py-1"
+              className="px-3.5 h-9 rounded-lg hover:bg-emerald-50 hover:text-[#0F5132] transition-colors cursor-pointer"
             >
               FAQ
             </button>
           </nav>
 
           {/* Right Header Actions */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2 shrink-0">
             {session ? (
               <>
                 <button
                   onClick={onEnterApp}
-                  className="px-3 sm:px-3.5 py-2 text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
+                  className="px-3.5 h-9 text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1.5"
                   title={`Connecté : ${session.name}`}
                 >
                   <span>Mon espace</span>
@@ -212,7 +212,7 @@ export function LandingPage({ onSelectPlanToSubscribe, onEnterDemoApp, onOpenLog
                 </button>
                 <button
                   onClick={onLogout}
-                  className="px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                  className="px-3.5 h-9 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
                 >
                   Déconnexion
                 </button>
@@ -221,7 +221,7 @@ export function LandingPage({ onSelectPlanToSubscribe, onEnterDemoApp, onOpenLog
               <>
                 <button
                   onClick={onOpenLogin}
-                  className="px-3 sm:px-3.5 py-2 text-xs font-bold border border-[#0F5132]/30 text-[#0F5132] hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
+                  className="px-3.5 h-9 text-xs font-bold border border-[#0F5132]/30 text-[#0F5132] hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1.5"
                 >
                   <Lock className="w-3.5 h-3.5" />
                   <span>Connexion</span>
@@ -231,7 +231,7 @@ export function LandingPage({ onSelectPlanToSubscribe, onEnterDemoApp, onOpenLog
 
             <button
               onClick={() => scrollToSection('tarifs')}
-              className="hidden sm:inline-flex px-4 py-2 text-xs font-bold bg-[#0F5132] hover:bg-[#0c4028] text-white rounded-lg shadow-2xs transition-colors cursor-pointer items-center gap-1.5"
+              className="hidden sm:inline-flex justify-center px-4 h-9 text-xs font-bold bg-[#0F5132] hover:bg-[#0c4028] text-white rounded-lg shadow-2xs transition-colors cursor-pointer items-center gap-1.5"
             >
               <Sparkles className="w-3.5 h-3.5 text-[#D4AF37]" />
               <span>Démarrer Gratuitement</span>
@@ -240,7 +240,7 @@ export function LandingPage({ onSelectPlanToSubscribe, onEnterDemoApp, onOpenLog
             {/* Mobile Hamburger Menu Toggle */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+              className="lg:hidden w-9 h-9 flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
               aria-label="Menu"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
