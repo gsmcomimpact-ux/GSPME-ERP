@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Site en construction</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #0f172a, #1e3a8a);
+      color: #fff;
+      text-align: center;
+      padding: 16px;
+    }
+    .card {
+      max-width: 520px;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      backdrop-filter: blur(8px);
+      border-radius: 20px;
+      padding: 48px 32px;
+    }
+    .icon { font-size: 64px; animation: bounce 2s infinite; }
+    h1 { font-size: 2rem; margin: 16px 0 12px; }
+    p { color: #cbd5e1; line-height: 1.6; }
+    .bar {
+      height: 8px;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 999px;
+      overflow: hidden;
+      margin: 28px 0 8px;
+    }
+    .bar span {
+      display: block;
+      height: 100%;
+      width: 65%;
+      background: linear-gradient(90deg, #38bdf8, #818cf8);
+      border-radius: 999px;
+      animation: grow 2.5s ease-out;
+    }
+    small { color: #94a3b8; }
+    .contact { margin-top: 28px; font-size: 0.95rem; }
+    .contact a { color: #38bdf8; text-decoration: none; }
+    @keyframes bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+    @keyframes grow { from { width: 0; } }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="icon">🚧</div>
+    <h1>Site en construction</h1>
+    <p>Nous travaillons dur pour vous offrir une nouvelle expérience.<br>Revenez très bientôt !</p>
+    <div class="bar"><span></span></div>
+    <small>Progression : 65 %</small>
+    <p class="contact">Une question ? <a href="mailto:contact@exemple.com">contact@exemple.com</a></p>
+  </main>
+</body>
+</html>
