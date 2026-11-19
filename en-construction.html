@@ -3,8 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Site en construction</title>
+  <title>Alpha Logistix Group – Site en construction</title>
+  <meta name="description" content="Le site d'Alpha Logistix Group est en construction. Contactez-nous : commercial@alphalogistixgroup.com">
   <style>
+    :root { --orange: #ff6622; --noir: #111; --gris: #555; }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       min-height: 100vh;
@@ -12,53 +14,76 @@
       align-items: center;
       justify-content: center;
       font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
-      background: linear-gradient(135deg, #0f172a, #1e3a8a);
-      color: #fff;
+      background: #fff;
+      color: var(--noir);
       text-align: center;
       padding: 16px;
     }
-    .card {
-      max-width: 520px;
-      width: 100%;
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.18);
-      backdrop-filter: blur(8px);
-      border-radius: 20px;
-      padding: 48px 32px;
+    main { max-width: 560px; width: 100%; }
+    .logo { width: min(280px, 70vw); height: auto; }
+    .badge {
+      display: inline-block;
+      background: var(--orange);
+      color: #fff;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      font-size: .8rem;
+      padding: 6px 16px;
+      border-radius: 999px;
+      margin-top: 8px;
     }
-    .icon { font-size: 64px; animation: bounce 2s infinite; }
-    h1 { font-size: 2rem; margin: 16px 0 12px; }
-    p { color: #cbd5e1; line-height: 1.6; }
+    h1 { font-size: clamp(1.6rem, 5vw, 2.2rem); margin: 20px 0 12px; }
+    p { color: var(--gris); line-height: 1.6; }
     .bar {
       height: 8px;
-      background: rgba(255, 255, 255, 0.15);
+      background: #eee;
       border-radius: 999px;
       overflow: hidden;
-      margin: 28px 0 8px;
+      margin: 28px auto 0;
+      max-width: 360px;
     }
     .bar span {
       display: block;
       height: 100%;
       width: 65%;
-      background: linear-gradient(90deg, #38bdf8, #818cf8);
+      background: var(--orange);
       border-radius: 999px;
       animation: grow 2.5s ease-out;
     }
-    small { color: #94a3b8; }
-    .contact { margin-top: 28px; font-size: 0.95rem; }
-    .contact a { color: #38bdf8; text-decoration: none; }
-    @keyframes bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+    .contacts {
+      margin-top: 32px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+    }
+    .contacts a {
+      color: var(--noir);
+      text-decoration: none;
+      font-weight: 600;
+      border: 2px solid var(--orange);
+      border-radius: 12px;
+      padding: 12px 20px;
+      transition: background .2s, color .2s;
+    }
+    .contacts a:hover { background: var(--orange); color: #fff; }
+    footer { margin-top: 32px; font-size: .8rem; color: #999; }
     @keyframes grow { from { width: 0; } }
   </style>
 </head>
 <body>
-  <main class="card">
-    <div class="icon">🚧</div>
-    <h1>Site en construction</h1>
-    <p>Nous travaillons dur pour vous offrir une nouvelle expérience.<br>Revenez très bientôt !</p>
-    <div class="bar"><span></span></div>
-    <small>Progression : 65 %</small>
-    <p class="contact">Une question ? <a href="mailto:contact@exemple.com">contact@exemple.com</a></p>
+  <main>
+    <img class="logo" src="logo-alpha-logistix.jpg" alt="Logo Alpha Logistix">
+    <div class="badge">🚧 Site en construction</div>
+    <h1>Notre nouveau site arrive bientôt</h1>
+    <p>Nous préparons une nouvelle expérience pour vous accompagner dans tous vos besoins logistiques. Revenez très prochainement !</p>
+    <div class="bar" aria-hidden="true"><span></span></div>
+    <div class="contacts">
+      <a href="tel:+22789994453">📞 +227 89 99 44 53</a>
+      <a href="mailto:commercial@alphalogistixgroup.com">✉️ commercial@alphalogistixgroup.com</a>
+    </div>
+    <footer>© Alpha Logistix Group</footer>
   </main>
 </body>
 </html>
